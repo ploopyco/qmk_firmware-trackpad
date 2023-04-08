@@ -21,18 +21,15 @@
 #include "timer.h"
 #include <stdlib.h>
 
-// Set Parameters
-uint16_t minAxisValue = ANALOG_JOYSTICK_AXIS_MIN;
-uint16_t maxAxisValue = ANALOG_JOYSTICK_AXIS_MAX;
-
-uint8_t maxCursorSpeed = ANALOG_JOYSTICK_SPEED_MAX;
-uint8_t speedRegulator = ANALOG_JOYSTICK_SPEED_REGULATOR; // Lower Values Create Faster Movement
-
 int16_t xOrigin, yOrigin;
 
-uint16_t lastCursor = 0;
+const pointing_device_driver_t analog_joystick_driver_default = {.init = analog_joystick_init, .get_report = analog_joystick_get_report, .get_cpi = NULL, .set_cpi = NULL};
 
-int16_t axisCoordinate(pin_t pin, uint16_t origin) {
+#if defined(ANALOG_JOYSTICK_X_AXIS_PIN) & defined(ANALOG_JOYSTICK_Y_AXIS_PIN)
+const analog_joystick_config_t analog_joystick_config_default = {.x = ANALOG_JOYSTICK_X_AXIS_PIN, .y = ANALOG_JOYSTICK_Y_AXIS_PIN, .axis_min = ANALOG_JOYSTICK_AXIS_MIN, .axis_max = ANALOG_JOYSTICK_AXIS_MAX, .speed_regulator = ANALOG_JOYSTICK_SPEED_REGULATOR, .speed_max = ANALOG_JOYSTICK_SPEED_MAX, .button = ANALOG_JOYSTICK_CLICK_PIN};
+#endif
+
+int16_t axisCoordinate(analog_joystick_config_t *analog_config, pin_t pin, uint16_t origin) {
     int8_t  direction;
     int16_t distanceFromOrigin;
     int16_t range;
@@ -43,11 +40,11 @@ int16_t axisCoordinate(pin_t pin, uint16_t origin) {
         return 0;
     } else if (origin > position) {
         distanceFromOrigin = origin - position;
-        range              = origin - minAxisValue;
+        range              = origin - analog_config->axis_min;
         direction          = -1;
     } else {
         distanceFromOrigin = position - origin;
-        range              = maxAxisValue - origin;
+        range              = analog_config->axis_max - origin;
         direction          = 1;
     }
 
@@ -62,35 +59,50 @@ int16_t axisCoordinate(pin_t pin, uint16_t origin) {
     }
 }
 
-int8_t axisToMouseComponent(pin_t pin, int16_t origin, uint8_t maxSpeed) {
-    int16_t coordinate = axisCoordinate(pin, origin);
+int8_t axisToMouseComponent(analog_joystick_config_t *analog_config, pin_t pin, int16_t origin) {
+    int16_t coordinate = axisCoordinate(analog_config, pin, origin);
     if (coordinate != 0) {
         float percent = (float)coordinate / 100;
-        return percent * maxCursorSpeed * (abs(coordinate) / speedRegulator);
+        return percent * analog_config->speed_max * (abs(coordinate) / analog_config->speed_regulator);
     } else {
         return 0;
     }
 }
 
-report_analog_joystick_t analog_joystick_read(void) {
+report_analog_joystick_t analog_joystick_read(analog_joystick_config_t *analog_config) {
     report_analog_joystick_t report = {0};
 
-    if (timer_elapsed(lastCursor) > ANALOG_JOYSTICK_READ_INTERVAL) {
-        lastCursor = timer_read();
-        report.x   = axisToMouseComponent(ANALOG_JOYSTICK_X_AXIS_PIN, xOrigin, maxCursorSpeed);
-        report.y   = axisToMouseComponent(ANALOG_JOYSTICK_Y_AXIS_PIN, yOrigin, maxCursorSpeed);
+    report.x = axisToMouseComponent(analog_config, analog_config->x, xOrigin);
+    report.y = axisToMouseComponent(analog_config, analog_config->y, yOrigin);
+
+    if (analog_config->button != NO_PIN) {
+        report.button = !readPin(analog_config->button);
     }
-#ifdef ANALOG_JOYSTICK_CLICK_PIN
-    report.button = !readPin(ANALOG_JOYSTICK_CLICK_PIN);
-#endif
     return report;
 }
 
-void analog_joystick_init(void) {
-#ifdef ANALOG_JOYSTICK_CLICK_PIN
-    setPinInputHigh(ANALOG_JOYSTICK_CLICK_PIN);
-#endif
+void analog_joystick_init(const void *config) {
+    analog_joystick_config_t *analog_config = (analog_joystick_config_t *)config;
+    if (analog_config->button != NO_PIN) {
+        setPinInputHigh(analog_config->button);
+    }
     // Account for drift
-    xOrigin = analogReadPin(ANALOG_JOYSTICK_X_AXIS_PIN);
-    yOrigin = analogReadPin(ANALOG_JOYSTICK_Y_AXIS_PIN);
+    xOrigin = analogReadPin(analog_config->x);
+    yOrigin = analogReadPin(analog_config->y);
+}
+
+report_mouse_t analog_joystick_get_report(const void *config) {
+    analog_joystick_config_t *analog_config = (analog_joystick_config_t *)config;
+    report_analog_joystick_t  data          = analog_joystick_read(analog_config);
+
+    report_mouse_t mouse_report = {0};
+
+    pd_dprintf("Raw ] X: %d, Y: %d\n", data.x, data.y);
+
+    mouse_report.x = data.x;
+    mouse_report.y = data.y;
+
+    mouse_report.buttons = pointing_device_handle_buttons(mouse_report.buttons, data.button, POINTING_DEVICE_BUTTON1);
+
+    return mouse_report;
 }
