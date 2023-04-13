@@ -19,7 +19,7 @@ void cirque_read_i2c(const void *config, uint8_t regaddr, uint8_t *data, uint8_t
     pointing_device_i2c_config_t *i2c_config = (pointing_device_i2c_config_t *)config;
 
     i2c_writeReg(i2c_config->address << 1, cmdByte, NULL, 0, i2c_config->timeout);
-    if (i2c_readReg(CIRQUE_PINNACLE_ADDR << 1, cmdByte, data, count, CIRQUE_PINNACLE_TIMEOUT) != I2C_STATUS_SUCCESS) {
+    if (i2c_readReg(i2c_config->address << 1, cmdByte, data, count, CIRQUE_PINNACLE_TIMEOUT) != I2C_STATUS_SUCCESS) {
         pd_dprintf("error cirque_pinnacle i2c_readReg\n");
     }
     i2c_stop();
@@ -37,8 +37,8 @@ void cirque_write_i2c(const void *config, uint8_t regaddr, uint8_t data) {
 
 void cirque_pinnacle_init_i2c(const void *config) {
     i2c_init();
-    cirque_pinnacle_init(&cirque_rap_i2c, config);
+    cirque_pinnacle_init(&cirque_rap_i2c, &cirque_init_config_default, config);
 }
 report_mouse_t cirque_pinnacle_get_report_i2c(const void *config) {
-    return cirque_pinnacle_get_report(&cirque_rap_i2c, config);
+    return cirque_pinnacle_get_report(&cirque_rap_i2c, &cirque_init_config_default, config);
 }
