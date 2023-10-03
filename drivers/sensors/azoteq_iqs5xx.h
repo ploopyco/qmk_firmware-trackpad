@@ -86,6 +86,46 @@ typedef struct __attribute__((packed)) {
     bool prox_event : 1;
 } azoteq_iqs5xx_system_config_1_t;
 
+typedef struct __attribute__((packed)) {
+    bool suspend : 1;
+    bool reset : 1;
+    int8_t _unused : 6;
+} azoteq_iqs5xx_system_control_1_t;
+
+typedef struct __attribute__((packed)) {
+    bool single_tap : 1;
+    bool tap_and_hold : 1;
+    bool swipe_x_minus : 1;
+    bool swipe_x_plus : 1;
+    bool swipe_y_minus : 1;
+    bool swipe_y_plus : 1;
+    int8_t _unused : 2;
+} azoteq_iqs5xx_single_finger_gestures_t;
+
+typedef struct __attribute__((packed)) {
+    bool two_finger_tap : 1;
+    bool scroll : 1;
+    bool zoom : 1;
+    int8_t _unused : 5;
+} azoteq_iqs5xx_multi_finger_gestures_t;
+
+typedef struct __attribute__((packed)) {
+    azoteq_iqs5xx_single_finger_gestures_t single_finger_gestures;
+    azoteq_iqs5xx_multi_finger_gestures_t multi_finger_gestures;
+    uint16_t tap_time;
+    uint16_t tap_distance;
+    uint16_t hold_time;
+    uint16_t swipe_initial_time;
+    uint16_t swipe_initial_distance;
+    uint16_t swipe_consecutive_time;
+    uint16_t swipe_consecutive_distance;
+    uint8_t  swipe_angle;
+    uint16_t scroll_initial_distance;
+    uint8_t  scroll_angle;
+    uint16_t zoom_initial_distance;
+    uint16_t zoom_consecutive_distance;
+} azoteq_iqs5xx_gesture_config_t;
+
 #define AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(h, l) ((h << 8) | l)
 
 i2c_status_t azoteq_iqs5xx_get_base_data(const pointing_device_i2c_config_t* i2c_config, azoteq_iqs5xx_base_data_t* base_data);
