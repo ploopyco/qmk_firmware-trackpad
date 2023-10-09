@@ -56,6 +56,7 @@
 
 const pointing_device_driver_t     azoteq_iqs5xx_driver_default     = {.init = azoteq_iqs5xx_init, .get_report = azoteq_iqs5xx_get_report, .set_cpi = NULL, .get_cpi = NULL};
 const pointing_device_i2c_config_t azoteq_iqs5xx_i2c_config_default = {.address = AZOTEQ_IQS5XX_ADDRESS, .timeout = AZOTEQ_IQS5XX_TIMEOUT_MS};
+static uint8_t previous_button_state = 0;
 
 i2c_status_t azoteq_iqs5xx_get_report_data(const pointing_device_i2c_config_t *i2c_config, azoteq_iqs5xx_report_data_t *report_data) {
         i2c_status_t status = i2c_readReg16(i2c_config->address << 1, AZOTEQ_IQS5XX_REG_NUMBER_OF_FINGERS, (uint8_t *)report_data, sizeof(azoteq_iqs5xx_report_data_t), i2c_config->timeout);
@@ -121,9 +122,9 @@ void azoteq_iqs5xx_gesture_config(const pointing_device_i2c_config_t *i2c_config
         config.single_finger_gestures.tap_and_hold  = true;
         config.multi_finger_gestures.two_finger_tap = true;
         config.multi_finger_gestures.scroll         = true;
-        config.tap_time                             = 500;
-        config.hold_time                            = 1000;
-        config.tap_distance                         = 10;
+        config.tap_time                             = 250;
+        config.hold_time                            = 500;
+        config.tap_distance                         = 50;
         config.scroll_initial_distance              = 5;
         status = i2c_writeReg16(i2c_config->address << 1, AZOTEQ_IQS5XX_REG_SINGLE_FINGER_GESTURES, (uint8_t *)&config, sizeof(azoteq_iqs5xx_gesture_config_t), i2c_config->timeout);
     }
@@ -165,6 +166,11 @@ report_mouse_t azoteq_iqs5xx_get_report(const void *i2c_config) {
             temp_report.y = (int8_t)base_data.y.l;
 #endif
         }
+        previous_button_state = temp_report.buttons;
+    }
+    else {
+        // Avoid dropping a tap-hold if there was an I2C error
+        temp_report.buttons = previous_button_state;
     }
 
     return temp_report;
