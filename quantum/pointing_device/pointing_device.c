@@ -218,6 +218,16 @@ report_mouse_t pointing_device_adjust_by_defines(report_mouse_t mouse_report) {
     return mouse_report;
 }
 
+#ifdef POINTING_DEVICE_MOTION_PIN
+__attribute__((weak)) bool pointing_device_driver_motion_detected(void) {
+#    ifdef POINTING_DEVICE_MOTION_PIN_ACTIVE_LOW
+    return !readPin(POINTING_DEVICE_MOTION_PIN);
+#    else
+    return readPin(POINTING_DEVICE_MOTION_PIN);
+#    endif
+}
+#endif
+
 /**
  * @brief Retrieves and processes pointing device data.
  *
@@ -246,12 +256,7 @@ __attribute__((weak)) bool pointing_device_task(void) {
 #    if defined(SPLIT_POINTING_ENABLE)
 #        error POINTING_DEVICE_MOTION_PIN not supported when sharing the pointing device report between sides.
 #    endif
-#    ifdef POINTING_DEVICE_MOTION_PIN_ACTIVE_LOW
-    if (!gpio_read_pin(POINTING_DEVICE_MOTION_PIN))
-#    else
-    if (gpio_read_pin(POINTING_DEVICE_MOTION_PIN))
-#    endif
-    {
+    if (pointing_device_driver_motion_detected()) {
 #endif
 
 #if defined(SPLIT_POINTING_ENABLE)
