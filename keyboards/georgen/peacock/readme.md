@@ -1,12 +1,8 @@
-# georgen/peacock
+# Peacock
 
 ![georgen/peacock](imgur.com image replace me!)
 
-Peacock is a QMK powered standalone trackpad. This board features:
-* 2 EC11/EC12 encoders
-* 5 Choc/MX switches with per key RGB
-* An additional indicator LED
-* And a 7" trackpad
+Peacock is a QMK powered standalone 7" trackpad. The board features a macropad with 5 switches and 2 encoders and a completly custom designed trackpad. The two parts of the board are connected using ![a VIK interface](https://github.com/sadekbaroudi/vik/blob/master/README.md) so the trackpad could also be used with different VIK compatible keyboards or controllers.
 
 * Keyboard Maintainer: [George Norton](https://github.com/george-norton)
 * Hardware Supported: PCBA with integrated RP2040
