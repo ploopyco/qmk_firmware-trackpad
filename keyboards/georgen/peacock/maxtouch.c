@@ -52,7 +52,7 @@ static uint16_t t100_num_reports                                = 0;
 static uint16_t cpi                                             = 300;
 
 // If true, we generate one more call to pointing_device_driver_get_report
-// after the motion pin goes low. This enables us to clear button state
+// after the motion pin goes high. This enables us to clear button state
 // in the case of a tap.
 static bool extra_event                                         = false;    
 
@@ -149,6 +149,7 @@ void pointing_device_driver_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
+        t46.inrushcfg = 7;
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
@@ -165,11 +166,14 @@ void pointing_device_driver_init(void) {
         cfg.ysize                           = information.matrix_y_size;    // TODO: Make configurable as this depends on the sensor design.
         cfg.xpitch                          = 15;   // Pitch between X-Lines (5mm + 0.1mm * XPitch). TODO: Make configurable as this depends on the sensor design.
         cfg.ypitch                          = 15;   // Pitch between Y-Lines (5mm + 0.1mm * YPitch). TODO: Make configurable as this depends on the sensor design.
-        cfg.gain                            = 1;    // Single transmit gain for mutual capacitance measurements
+        cfg.gain                            = 6;    // Single transmit gain for mutual capacitance measurements
         cfg.dxgain                          = 255;  // Dual transmit gain for mutual capacitance measurements
-        cfg.tchthr                          = 12;   // Touch threshold
+        cfg.tchthr                          = 35;   // Touch threshold
         cfg.mrgthr                          = 5;    // Merge threshold
         cfg.mrghyst                         = 5;    // Merge threshold hysterisis
+        cfg.movsmooth                       = 224;
+        cfg.movfilter                       = 4;
+
         cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT);    // CPI handling, adjust the reported resolution
         cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH);     // CPI handling, adjust the reported resolution
     
