@@ -20,12 +20,51 @@
 #   define MXT_SENSOR_HEIGHT 91
 #endif
 
+// By default we assume all available X and Y pins are in use, but a designer
+// may decide to leave some pins unconnected, so the size can be overridden here.
+#ifndef MXT_MATRIX_X_SIZE
+#   define MXT_MATRIX_X_SIZE information.matrix_x_size
+#endif
+
+#ifndef MXT_MATRIX_Y_SIZE
+#   define MXT_MATRIX_Y_SIZE information.matrix_y_size
+#endif
+
 #ifndef MAX_TOUCH_REPORTS
 #   define MAX_TOUCH_REPORTS 4 // Can be up to 10
 #endif
 
 #ifndef MXT_SCROLL_DIVISOR
 #   define MXT_SCROLL_DIVISOR 4
+#endif
+
+
+// We detect a tap gesture if an UP event occurs within MXT_TAP_TIME
+// milliseconds of the DOWN event.
+#ifndef MXT_TAP_TIME
+#   define MXT_TAP_TIME 100
+#endif
+
+// We detect a tap and hold gesture if a finger does not move
+// further than MXT_TAP_AND_HOLD_DISTANCE within MXT_TAP_AND_HOLD_TIME
+// milliseconds of being put down on the sensor.
+#ifndef MXT_TAP_AND_HOLD_TIME
+#   define MXT_TAP_AND_HOLD_TIME 200
+#endif
+#ifndef MXT_TAP_AND_HOLD_DISTANCE
+#   define MXT_TAP_AND_HOLD_DISTANCE 5
+#endif
+
+#ifndef MXT_DEFAULT_DPI
+    #define MXT_DEFAULT_DPI 400
+#endif
+
+#ifndef MXT_TOUCH_THRESHOLD
+    #define MXT_TOUCH_THRESHOLD 35
+#endif
+
+#ifndef MXT_GAIN
+    #define MXT_GAIN 6
 #endif
 
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
@@ -49,7 +88,7 @@ static uint16_t t100_subsequent_report_ids[MAX_TOUCH_REPORTS]   = {};
 static uint16_t t100_num_reports                                = 0;
 
 // Current driver state state
-static uint16_t cpi                                             = 300;
+static uint16_t cpi                                             = MXT_DEFAULT_DPI;
 
 // If true, we generate one more call to pointing_device_driver_get_report
 // after the motion pin goes high. This enables us to clear button state
@@ -161,16 +200,16 @@ void pointing_device_driver_init(void) {
         cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
         cfg.cfg1                            = T100_CFG_SWITCHXY; // Could also handle rotation, and axis inversion in hardware here
         cfg.scraux                          = 0x1;  // AUX data: Report the number of touch events
-        cfg.numtch                          = MAX_TOUCH_REPORTS; // The number of touch reports we want to receive (upto 10)
-        cfg.xsize                           = information.matrix_x_size;    // TODO: Make configurable as this depends on the sensor design.
-        cfg.ysize                           = information.matrix_y_size;    // TODO: Make configurable as this depends on the sensor design.
-        cfg.xpitch                          = 15;   // Pitch between X-Lines (5mm + 0.1mm * XPitch). TODO: Make configurable as this depends on the sensor design.
-        cfg.ypitch                          = 15;   // Pitch between Y-Lines (5mm + 0.1mm * YPitch). TODO: Make configurable as this depends on the sensor design.
-        cfg.gain                            = 6;    // Single transmit gain for mutual capacitance measurements
-        cfg.dxgain                          = 255;  // Dual transmit gain for mutual capacitance measurements
-        cfg.tchthr                          = 35;   // Touch threshold
+        cfg.numtch                          = MAX_TOUCH_REPORTS;    // The number of touch reports we want to receive (upto 10)
+        cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
+        cfg.ysize                           = MXT_MATRIX_Y_SIZE;    // Make configurable as this depends on the sensor design.
+        cfg.xpitch                          = MXT_SENSOR_WIDTH / MXT_MATRIX_X_SIZE;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
+        cfg.ypitch                          = MXT_SENSOR_HEIGHT / MXT_MATRIX_Y_SIZE;    // Pitch between Y-Lines (5mm + 0.1mm * YPitch).
+        cfg.gain                            = MXT_GAIN; // Single transmit gain for mutual capacitance measurements
+        cfg.dxgain                          = 255;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
+        cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
         cfg.mrgthr                          = 5;    // Merge threshold
-        cfg.mrghyst                         = 5;    // Merge threshold hysterisis
+        cfg.mrghyst                         = 5;    // Merge threshold hysteresis
         cfg.movsmooth                       = 224;
         cfg.movfilter                       = 4;
 
@@ -224,7 +263,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                     seen_t100                   = true;
 
                     // If this isnt a finger down event, update either our move or scroll
-                    // potition, depending on the number of fingers on the screen.
+                    // position, depending on the number of fingers on the screen.
                     if (!down) {
                         if (fingers == 2) {
                             // Scrolling is too fast, so divide the h/v values.
@@ -245,10 +284,10 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                         }
                     }
 
-                    // If a finger is held in the same spot for 500ms, send a button down.
+                    // If a finger is held in the same spot for 300ms, send a button down.
                     if (!move && !button_held && (event == NO_EVENT || event == MOVE || event == UP)) {
-                        if (elapsed > 500) {
-                            if ((abs(down_x - x) < 8) && (abs(down_y - y) < 8)) {
+                        if (elapsed > MXT_TAP_AND_HOLD_TIME) {
+                            if ((abs(down_x - x) < MXT_TAP_AND_HOLD_DISTANCE) && (abs(down_y - y) < MXT_TAP_AND_HOLD_DISTANCE)) {
                                 held_button             = POINTING_DEVICE_BUTTON1 + max_fingers - 1;
                                 mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, true, held_button);
                                 button_held             = true;
@@ -259,7 +298,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                         }
                     }
 
-                    // Detect tap events by measuring the time beween finger down and up, and the distance traveled.
+                    // Detect tap events by measuring the time between finger down and up, and the distance traveled.
                     if (event == DOWN) {
                         down_timer  = timer_read32();
                         down_x      = x;
@@ -273,7 +312,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                             mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, false, held_button);
                             button_held             = false;
                         }
-                        else if (elapsed < 150) {
+                        else if (elapsed < MXT_TAP_TIME) {
                             held_button             = POINTING_DEVICE_BUTTON1 + max_fingers - 1;
                             mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, true, held_button);
                             button_held             = true;
@@ -283,6 +322,8 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
                     }
                     last_x = x;
                     last_y = y;
+                } else if ((message.report_id > t100_subsequent_report_ids[0]) && (message.report_id < t100_subsequent_report_ids[0] + t100_num_reports)) {
+                    // This is a report for a finger we are not explicitly handling.
                 } else {
                     uprintf("Unhandled ID: %d\n", message.report_id);
                 }
@@ -290,7 +331,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
         }
     }
 
-    // Special case, if no messages were recieved this is probably an extra_event we requested after sending a
+    // Special case, if no messages were received this is probably an extra_event we requested after sending a
     // button down for a tap. We need to send the button up now. 
     if (!seen_t100 && button_held) {
         mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, false, held_button);
