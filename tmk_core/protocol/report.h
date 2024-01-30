@@ -214,16 +214,32 @@ typedef struct {
     int8_t            h;
 } PACKED report_mouse_t;
 
+#if DIGITIZER_FINGER_COUNT > 0
+typedef struct {
+    uint8_t  tip : 1;
+    uint8_t  confidence : 1;
+    uint8_t  reserved : 2;
+    uint8_t  contact_id : 4;
+    uint16_t x;
+    uint16_t y;
+} PACKED report_digitizer_finger_t;
+#endif
+
 typedef struct {
 #ifdef DIGITIZER_SHARED_EP
     uint8_t report_id;
 #endif
+#if DIGITIZER_HAS_STYLUS
     bool     in_range : 1;
     bool     tip : 1;
     bool     barrel : 1;
     uint8_t  reserved : 5;
     uint16_t x;
     uint16_t y;
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+    report_digitizer_finger_t fingers[DIGITIZER_FINGER_COUNT];
+#endif
 } PACKED report_digitizer_t;
 
 #if JOYSTICK_AXIS_RESOLUTION > 8

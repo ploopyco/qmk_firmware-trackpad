@@ -5,6 +5,7 @@
 #include "i2c_master.h"
 #include "maxtouch.h"
 #include "pointing_device.h"
+#include "digitizer.h"
 
 #define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
 #define CPI_TO_SAMPLES(cpi, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((cpi) * (dist_in_mm) * 10, 254))
@@ -56,7 +57,7 @@
 #endif
 
 #ifndef MXT_DEFAULT_DPI
-    #define MXT_DEFAULT_DPI 400
+    #define MXT_DEFAULT_DPI 1600
 #endif
 
 #ifndef MXT_TOUCH_THRESHOLD
@@ -198,7 +199,7 @@ void pointing_device_driver_init(void) {
         i2c_status_t status                 = i2c_readReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
-        cfg.cfg1                            = T100_CFG_SWITCHXY; // Could also handle rotation, and axis inversion in hardware here
+        cfg.cfg1                            = T100_CFG_SWITCHXY | T100_CFG_INVERTY; // Could also handle rotation, and axis inversion in hardware here
         cfg.scraux                          = 0x1;  // AUX data: Report the number of touch events
         cfg.numtch                          = MAX_TOUCH_REPORTS;    // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
@@ -224,6 +225,7 @@ void pointing_device_driver_init(void) {
     }
 }
 
+#if 0
 report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
     // TODO: Refactor the gesture handling.
     static bool button_held = false;
@@ -340,6 +342,50 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
 
     return mouse_report;
 }
+#else
+report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
+
+    if (t44_message_count_address) {
+        mxt_message_count message_count = {};
+        i2c_status_t status = i2c_readReg16(MXT336UD_ADDRESS, t44_message_count_address,
+            (uint8_t *)&message_count, sizeof(mxt_message_count), MXT_I2C_TIMEOUT_MS);
+        if (status == I2C_STATUS_SUCCESS) {
+            for (int i = 0; i < message_count.count; i++) {
+                mxt_message message = {};
+                status              = i2c_readReg16(MXT336UD_ADDRESS, t5_message_processor_address,
+                                        (uint8_t *)&message, sizeof(mxt_message), MXT_I2C_TIMEOUT_MS);
+
+                if (message.report_id == t100_first_report_id) {
+                    // Not used
+                }
+                else if ((message.report_id >= t100_subsequent_report_ids[0]) && (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
+                    const uint8_t contact_id    = message.report_id - t100_subsequent_report_ids[0];
+                    int event                   = (message.data[0] & 0xf);
+                    uint16_t x                  = message.data[1] | (message.data[2] << 8);
+                    uint16_t y                  = message.data[3] | (message.data[4] << 8);
+                    if (event == DOWN) {
+                        digitizer_state.fingers[contact_id].tip     = 1;
+                    }
+                    if (event == UP) {
+                        digitizer_state.fingers[contact_id].tip     = 0;
+                    }
+                    digitizer_state.fingers[contact_id].confidence  = !(event == UNSUPUP || event == DOWNSUP);
+                    digitizer_state.fingers[contact_id].x           = x;
+                    digitizer_state.fingers[contact_id].y           = y;
+                }
+                else {
+                    uprintf("Unhandled ID: %d (%d..%d) %d\n", message.report_id, t100_subsequent_report_ids[0], t100_subsequent_report_ids[t100_num_reports], t100_subsequent_report_ids[t100_num_reports-1]);
+                }
+            }
+        }
+    }
+
+    digitizer_state.dirty = true;
+    digitizer_flush();
+
+    return mouse_report;
+}
+#endif
 
 uint16_t pointing_device_driver_get_cpi(void) {
     return cpi;

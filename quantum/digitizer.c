@@ -15,23 +15,31 @@
  */
 
 #include "digitizer.h"
+#include "debug.h"
 
 digitizer_t digitizer_state = {
+#ifdef DIGITIZER_HAS_STYLUS
     .in_range = false,
     .tip      = false,
     .barrel   = false,
     .x        = 0,
     .y        = 0,
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+    .fingers = {},
+#endif
     .dirty    = false,
 };
 
 void digitizer_flush(void) {
     if (digitizer_state.dirty) {
+        uprintf("Flush %d %d\n", digitizer_state.fingers[0].x, digitizer_state.fingers[0].y);
         host_digitizer_send(&digitizer_state);
         digitizer_state.dirty = false;
     }
 }
 
+#ifdef DIGITIZER_HAS_STYLUS
 void digitizer_in_range_on(void) {
     digitizer_state.in_range = true;
     digitizer_state.dirty    = true;
@@ -74,3 +82,4 @@ void digitizer_set_position(float x, float y) {
     digitizer_state.dirty = true;
     digitizer_flush();
 }
+#endif

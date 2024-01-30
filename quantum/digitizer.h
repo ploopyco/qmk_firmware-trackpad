@@ -25,12 +25,26 @@
  * \{
  */
 
+#if DIGITIZER_FINGER_COUNT > 0
 typedef struct {
+    bool tip : 1;
+    bool confidence : 1;
+    uint16_t x;
+    uint16_t y;
+} finger;
+#endif
+
+typedef struct {
+#ifdef DIGITIZER_HAS_STYLUS
     bool  in_range : 1;
     bool  tip : 1;
     bool  barrel : 1;
     float x;
     float y;
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+    finger fingers[DIGITIZER_FINGER_COUNT];
+#endif
     bool  dirty;
 } digitizer_t;
 
@@ -41,6 +55,7 @@ extern digitizer_t digitizer_state;
  */
 void digitizer_flush(void);
 
+#ifdef DIGITIZER_HAS_STYLUS
 /**
  * \brief Assert the "in range" indicator, and flush the report.
  */
@@ -78,6 +93,7 @@ void digitizer_barrel_switch_off(void);
  * \param y The Y value of the contact position, from 0 to 1.
  */
 void digitizer_set_position(float x, float y);
+#endif
 
 void host_digitizer_send(digitizer_t *digitizer);
 
