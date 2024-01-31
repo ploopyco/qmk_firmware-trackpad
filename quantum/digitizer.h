@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include "report.h"
 
 /**
  * \file
@@ -25,37 +26,17 @@
  * \{
  */
 
-#if DIGITIZER_FINGER_COUNT > 0
-typedef struct {
-    bool tip : 1;
-    bool confidence : 1;
-    uint16_t x;
-    uint16_t y;
-} finger;
-#endif
-
-typedef struct {
-#ifdef DIGITIZER_HAS_STYLUS
-    bool  in_range : 1;
-    bool  tip : 1;
-    bool  barrel : 1;
-    float x;
-    float y;
-#endif
-#if DIGITIZER_FINGER_COUNT > 0
-    finger fingers[DIGITIZER_FINGER_COUNT];
-#endif
-    bool  dirty;
-} digitizer_t;
-
-extern digitizer_t digitizer_state;
-
 /**
  * \brief Send the digitizer report to the host if it is marked as dirty.
  */
 void digitizer_flush(void);
 
-#ifdef DIGITIZER_HAS_STYLUS
+/**
+ * Legacy API. In the past digitizer was purely a software feature.
+ * It provided an API to place the cursor at an absolute position.
+ * Consider removing these functions.
+ */
+#if DIGITIZER_HAS_STYLUS
 /**
  * \brief Assert the "in range" indicator, and flush the report.
  */
@@ -95,6 +76,9 @@ void digitizer_barrel_switch_off(void);
 void digitizer_set_position(float x, float y);
 #endif
 
-void host_digitizer_send(digitizer_t *digitizer);
+report_digitizer_t digitizer_get_report(void);
+void digitizer_set_report(report_digitizer_t digitizer_report);
+void digitizer_init(void);
+bool digitizer_task(void);
 
 /** \} */

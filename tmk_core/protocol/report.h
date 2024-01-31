@@ -26,6 +26,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #    include "joystick.h"
 #endif
 
+#ifdef DIGITIZER_ENABLE
+// The report structure will depend on the hardware capabilities
+#    include "digitizer_driver.h"
+#endif
+
 // clang-format off
 
 /* HID report IDs */
@@ -239,6 +244,11 @@ typedef struct {
 #endif
 #if DIGITIZER_FINGER_COUNT > 0
     report_digitizer_finger_t fingers[DIGITIZER_FINGER_COUNT];
+#endif
+#ifdef DIGITIZER_TOUCH_PAD
+    uint16_t scan_time;
+    uint8_t contact_count : 4;
+    uint8_t reserved2 : 4;
 #endif
 } PACKED report_digitizer_t;
 

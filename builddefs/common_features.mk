@@ -120,7 +120,7 @@ ifeq ($(strip $(MOUSEKEY_ENABLE)), yes)
     MOUSE_ENABLE := yes
 endif
 
-VALID_POINTING_DEVICE_DRIVER_TYPES := adns5050 adns9800 analog_joystick azoteq_iqs5xx cirque_pinnacle_i2c cirque_pinnacle_spi paw3204 pmw3320 pmw3360 pmw3389 pimoroni_trackball custom
+VALID_POINTING_DEVICE_DRIVER_TYPES := adns5050 adns9800 analog_joystick azoteq_iqs5xx cirque_pinnacle_i2c cirque_pinnacle_spi maxtouch paw3204 pmw3320 pmw3360 pmw3389 pimoroni_trackball custom
 ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
     ifeq ($(filter $(POINTING_DEVICE_DRIVER),$(VALID_POINTING_DEVICE_DRIVER_TYPES)),)
         $(call CATASTROPHIC_ERROR,Invalid POINTING_DEVICE_DRIVER,POINTING_DEVICE_DRIVER="$(POINTING_DEVICE_DRIVER)" is not a valid pointing device type)
@@ -152,6 +152,8 @@ ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
             SRC += drivers/sensors/cirque_pinnacle.c
             SRC += drivers/sensors/cirque_pinnacle_gestures.c
             SRC += $(QUANTUM_DIR)/pointing_device/pointing_device_gestures.c
+        else ifeq ($(strip $(POINTING_DEVICE_DRIVER)), maxtouch)
+            I2C_DRIVER_REQUIRED = yes
         else ifeq ($(strip $(POINTING_DEVICE_DRIVER)), pimoroni_trackball)
             I2C_DRIVER_REQUIRED = yes
         else ifneq ($(filter $(strip $(POINTING_DEVICE_DRIVER)),pmw3360 pmw3389),)
@@ -160,6 +162,31 @@ ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
         endif
     endif
 endif
+
+VALID_DIGITIZER_DRIVER_TYPES := azoteq_iqs5xx maxtouch custom
+ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
+    ifeq ($(filter $(DIGITIZER_DRIVER),$(VALID_DIGITIZER_DRIVER_TYPES)),)
+        $(call CATASTROPHIC_ERROR,Invalid DIGITIZER_DRIVER,DIGITIZER_DRIVER="$(DIGITIZER_DRIVER)" is not a valid digitizer device type)
+    else
+        OPT_DEFS += -DDIGITIZER_ENABLE
+        MOUSE_ENABLE := yes
+        SRC += $(QUANTUM_DIR)/digitizer.c
+        ifneq ($(strip $(DIGITIZER_DRIVER)), custom)
+            SRC += drivers/sensors/$(strip $(DIGITIZER_DRIVER)).c
+            OPT_DEFS += -DDIGITIZER_DRIVER_$(strip $(shell echo $(DIGITIZER_DRIVER) | tr '[:lower:]' '[:upper:]'))
+        endif
+        OPT_DEFS += -DDIGITIZER_DRIVER_$(strip $(DIGITIZER_DRIVER))
+        ifeq ($(strip $(DIGITIZER_DRIVER)), azoteq_iqs5xx)
+            I2C_DRIVER_REQUIRED = yes
+        else ifeq ($(strip $(DIGITIZER_DRIVER)), maxtouch)
+            I2C_DRIVER_REQUIRED = yes
+        endif
+    endif
+    ifeq ($(DIGITIZER_DRIVER), $(POINTING_DEVICE_DRIVER))
+            $(call CATASTROPHIC_ERROR,The DIGITIZER and POINTING_DEVICE features cannot both use the same driver)
+    endif
+endif
+
 
 QUANTUM_PAINTER_ENABLE ?= no
 ifeq ($(strip $(QUANTUM_PAINTER_ENABLE)), yes)

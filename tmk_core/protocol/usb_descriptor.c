@@ -263,7 +263,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    ifdef DIGITIZER_SHARED_EP
         HID_RI_REPORT_ID(8, REPORT_ID_DIGITIZER),
 #    endif
-#    ifdef DIGITIZER_HAS_STYLUS
+#    if DIGITIZER_HAS_STYLUS
         HID_RI_USAGE(8, 0x20),             // Stylus
         HID_RI_COLLECTION(8, 0x00),        // Physical
             // In Range, Tip Switch & Barrel Switch (3 bits)
@@ -275,7 +275,6 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_REPORT_COUNT(8, 0x03),
             HID_RI_REPORT_SIZE(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
-
             // Padding (5 bits)
             HID_RI_REPORT_COUNT(8, 0x05),
             HID_RI_INPUT(8, HID_IOF_CONSTANT),
@@ -671,6 +670,25 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
 #    endif
+#ifdef DIGITIZER_TOUCH_PAD
+    // Microsoft require a set of "mandatory" properties in order for Windows to accept a touch pad
+    HID_RI_UNIT_EXPONENT(8, 0x0C),  // -4
+    HID_RI_UNIT(16, 0x1001),        // Seconds, SI Linear
+    HID_RI_PHYSICAL_MINIMUM(16, 65535),
+    HID_RI_LOGICAL_MAXIMUM(16, 65535),
+    HID_RI_REPORT_COUNT(8, 0x01),
+    HID_RI_REPORT_SIZE(8, 0x10),
+    HID_RI_USAGE_PAGE(8, 0x0D),    // Digitizers
+    HID_RI_USAGE(8, 0x56),         // Scan Time
+    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+    HID_RI_USAGE(8, 0x54),         // Contact count
+    HID_RI_LOGICAL_MAXIMUM(8, DIGITIZER_FINGER_COUNT),
+    HID_RI_REPORT_COUNT(8, 0x01),
+    HID_RI_REPORT_SIZE(8, 0x04),
+    // Padding (4 bits)
+    HID_RI_REPORT_COUNT(8, 0x04),
+    HID_RI_INPUT(8, HID_IOF_CONSTANT),
+#endif
     HID_RI_END_COLLECTION(0),
 #    ifndef DIGITIZER_SHARED_EP
 };

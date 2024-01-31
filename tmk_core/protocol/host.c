@@ -218,58 +218,11 @@ void host_joystick_send(joystick_t *joystick) {
 __attribute__((weak)) void send_joystick(report_joystick_t *report) {}
 
 #ifdef DIGITIZER_ENABLE
-void host_digitizer_send(digitizer_t *digitizer) {
-    report_digitizer_t report = {
+void host_digitizer_send(report_digitizer_t *report) {
 #    ifdef DIGITIZER_SHARED_EP
-        .report_id = REPORT_ID_DIGITIZER,
+    report->report_id = REPORT_ID_DIGITIZER;
 #    endif
-#    ifdef DIGITIZER_HAS_STYLUS
-        .in_range = digitizer->in_range,
-        .tip      = digitizer->tip,
-        .barrel   = digitizer->barrel,
-        .x        = (uint16_t)(digitizer->x * 0x7FFF),
-        .y        = (uint16_t)(digitizer->y * 0x7FFF),
-#    endif
-#    define FINGER(X) \
-        .fingers[X].tip = digitizer->fingers[X].tip,                \
-        .fingers[X].confidence = digitizer->fingers[X].confidence,  \
-        .fingers[X].contact_id = X,                                 \
-        .fingers[X].x = digitizer->fingers[X].x,                    \
-        .fingers[X].y = digitizer->fingers[X].y,
-#    if DIGITIZER_FINGER_COUNT > 0
-        FINGER(0)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 1
-        FINGER(1)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 2
-        FINGER(2)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 3
-        FINGER(3)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 4
-        FINGER(4)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 5
-        FINGER(5)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 6
-        FINGER(6)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 7
-        FINGER(7)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 8
-        FINGER(8)
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 9
-        FINGER(9)
-#    endif
-#undef FINGER
-    };
-
-    send_digitizer(&report);
+    send_digitizer(report);
 }
 #endif
 

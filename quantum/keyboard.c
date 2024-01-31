@@ -86,6 +86,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifdef POINTING_DEVICE_ENABLE
 #    include "pointing_device.h"
 #endif
+#ifdef DIGITIZER_ENABLE
+#    include "digitizer.h"
+#endif
 #ifdef MIDI_ENABLE
 #    include "process_midi.h"
 #endif
@@ -179,6 +182,10 @@ uint32_t last_pointing_device_activity_elapsed(void) {
     return sync_timer_elapsed32(last_pointing_device_modification_time);
 }
 void last_pointing_device_activity_trigger(void) {
+    last_pointing_device_modification_time = last_input_modification_time = sync_timer_read32();
+}
+void last_digitizer_activity_trigger(void) {
+    // TODO: differentiate between digitizer and pointing device? How is this time used?
     last_pointing_device_modification_time = last_input_modification_time = sync_timer_read32();
 }
 
@@ -479,6 +486,9 @@ void keyboard_init(void) {
     // init after split init
     pointing_device_init();
 #endif
+#ifdef DIGITIZER_ENABLE
+    digitizer_init();
+#endif
 #ifdef BLUETOOTH_ENABLE
     bluetooth_init();
 #endif
@@ -698,6 +708,13 @@ void keyboard_task(void) {
 #ifdef POINTING_DEVICE_ENABLE
     if (pointing_device_task()) {
         last_pointing_device_activity_trigger();
+        activity_has_occurred = true;
+    }
+#endif
+
+#ifdef DIGITIZER_ENABLE
+    if (digitizer_task()) {
+        last_digitizer_activity_trigger();
         activity_has_occurred = true;
     }
 #endif

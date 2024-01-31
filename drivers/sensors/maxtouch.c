@@ -4,8 +4,14 @@
 #include QMK_KEYBOARD_H
 #include "i2c_master.h"
 #include "maxtouch.h"
-#include "pointing_device.h"
-#include "digitizer.h"
+
+#ifdef DIGITIZER_ENABLE
+#   include "digitizer.h"
+#   include "digitizer_driver.h"
+#endif
+#ifdef POINTING_DEVICE_ENABLE
+#   include "pointing_device.h"
+#endif
 
 #define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
 #define CPI_TO_SAMPLES(cpi, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((cpi) * (dist_in_mm) * 10, 254))
@@ -29,10 +35,6 @@
 
 #ifndef MXT_MATRIX_Y_SIZE
 #   define MXT_MATRIX_Y_SIZE information.matrix_y_size
-#endif
-
-#ifndef MAX_TOUCH_REPORTS
-#   define MAX_TOUCH_REPORTS 4 // Can be up to 10
 #endif
 
 #ifndef MXT_SCROLL_DIVISOR
@@ -70,31 +72,33 @@
 
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
 // versions. Instead must read the addresses from the object table.
-static uint16_t t2_encryption_status_address                    = 0;
-static uint16_t t5_message_processor_address                    = 0;
-static uint16_t t5_max_message_size                             = 0;
-static uint16_t t6_command_processor_address                    = 0;
-static uint16_t t7_powerconfig_address                          = 0;
-static uint16_t t8_acquisitionconfig_address                    = 0;
-static uint16_t t44_message_count_address                       = 0;
-static uint16_t t46_cte_config_address                          = 0;
-static uint16_t t100_multiple_touch_touchscreen_address         = 0;
+static uint16_t t2_encryption_status_address                        = 0;
+static uint16_t t5_message_processor_address                        = 0;
+static uint16_t t5_max_message_size                                 = 0;
+static uint16_t t6_command_processor_address                        = 0;
+static uint16_t t7_powerconfig_address                              = 0;
+static uint16_t t8_acquisitionconfig_address                        = 0;
+static uint16_t t44_message_count_address                           = 0;
+static uint16_t t46_cte_config_address                              = 0;
+static uint16_t t100_multiple_touch_touchscreen_address             = 0;
 
 // The object table also contains report_ids. These are used to identify which object generated a
 // message. Again we must lookup these values rather than using hard coded values.
 // Most messages are ignored, we basically just want the messages from the t100 object for now.
-static uint16_t t100_first_report_id                            = 0;
-static uint16_t t100_second_report_id                           = 0;
-static uint16_t t100_subsequent_report_ids[MAX_TOUCH_REPORTS]   = {};
-static uint16_t t100_num_reports                                = 0;
+static uint16_t t100_first_report_id                                = 0;
+static uint16_t t100_second_report_id                               = 0;
+static uint16_t t100_subsequent_report_ids[DIGITIZER_FINGER_COUNT]  = {};
+static uint16_t t100_num_reports                                    = 0;
 
 // Current driver state state
-static uint16_t cpi                                             = MXT_DEFAULT_DPI;
+static uint16_t cpi                                                 = MXT_DEFAULT_DPI;
 
 // If true, we generate one more call to pointing_device_driver_get_report
 // after the motion pin goes high. This enables us to clear button state
 // in the case of a tap.
-static bool extra_event                                         = false;    
+#ifdef POINTING_DEVICE_ENABLE
+static bool extra_event                                             = false;
+#endif
 
 void pointing_device_driver_init(void) {
     mxt_information_block information = {0};
@@ -144,7 +148,7 @@ void pointing_device_driver_init(void) {
                         t100_multiple_touch_touchscreen_address = address;
                         t100_first_report_id                    = report_id;
                         t100_second_report_id                   = report_id + 1;
-                        for (t100_num_reports = 0; t100_num_reports < MAX_TOUCH_REPORTS && t100_num_reports < object.report_ids_per_instance; t100_num_reports++) {
+                        for (t100_num_reports = 0; t100_num_reports < DIGITIZER_FINGER_COUNT && t100_num_reports < object.report_ids_per_instance; t100_num_reports++) {
                             t100_subsequent_report_ids[t100_num_reports] = report_id + 2 + t100_num_reports;
                         }
                         break;
@@ -199,9 +203,9 @@ void pointing_device_driver_init(void) {
         i2c_status_t status                 = i2c_readReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
-        cfg.cfg1                            = T100_CFG_SWITCHXY | T100_CFG_INVERTY; // Could also handle rotation, and axis inversion in hardware here
+        cfg.cfg1                            = T100_CFG_SWITCHXY; // Could also handle rotation, and axis inversion in hardware here
         cfg.scraux                          = 0x1;  // AUX data: Report the number of touch events
-        cfg.numtch                          = MAX_TOUCH_REPORTS;    // The number of touch reports we want to receive (upto 10)
+        cfg.numtch                          = DIGITIZER_FINGER_COUNT;   // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
         cfg.ysize                           = MXT_MATRIX_Y_SIZE;    // Make configurable as this depends on the sensor design.
         cfg.xpitch                          = MXT_SENSOR_WIDTH / MXT_MATRIX_X_SIZE;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
@@ -225,7 +229,7 @@ void pointing_device_driver_init(void) {
     }
 }
 
-#if 0
+#ifdef POINTING_DEVICE_ENABLE
 report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
     // TODO: Refactor the gesture handling.
     static bool button_held = false;
@@ -342,48 +346,61 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
 
     return mouse_report;
 }
-#else
-report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
+#endif
 
+#ifdef DIGITIZER_ENABLE
+report_digitizer_t digitizer_driver_get_report(report_digitizer_t digitizer_report) {
     if (t44_message_count_address) {
         mxt_message_count message_count = {};
+        static uint32_t scan_time = 0;
+
         i2c_status_t status = i2c_readReg16(MXT336UD_ADDRESS, t44_message_count_address,
             (uint8_t *)&message_count, sizeof(mxt_message_count), MXT_I2C_TIMEOUT_MS);
         if (status == I2C_STATUS_SUCCESS) {
+
+            uprintf("Msg.. %d\n", message_count.count);
             for (int i = 0; i < message_count.count; i++) {
                 mxt_message message = {};
                 status              = i2c_readReg16(MXT336UD_ADDRESS, t5_message_processor_address,
                                         (uint8_t *)&message, sizeof(mxt_message), MXT_I2C_TIMEOUT_MS);
 
                 if (message.report_id == t100_first_report_id) {
-                    // Not used
+                    const uint8_t contacts = message.data[1];
+                    digitizer_report.contact_count = contacts;
+                    if (scan_time == 0 && contacts) {
+                        scan_time = timer_read32();
+                    }
+                    if (contacts == 0) {
+                        scan_time = 0;
+                    }
                 }
-                else if ((message.report_id >= t100_subsequent_report_ids[0]) && (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
+                else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
+                         (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
                     const uint8_t contact_id    = message.report_id - t100_subsequent_report_ids[0];
                     int event                   = (message.data[0] & 0xf);
                     uint16_t x                  = message.data[1] | (message.data[2] << 8);
                     uint16_t y                  = message.data[3] | (message.data[4] << 8);
                     if (event == DOWN) {
-                        digitizer_state.fingers[contact_id].tip     = 1;
+                        digitizer_report.fingers[contact_id].tip     = 1;
                     }
                     if (event == UP) {
-                        digitizer_state.fingers[contact_id].tip     = 0;
+                        digitizer_report.fingers[contact_id].tip     = 0;
                     }
-                    digitizer_state.fingers[contact_id].confidence  = !(event == UNSUPUP || event == DOWNSUP);
-                    digitizer_state.fingers[contact_id].x           = x;
-                    digitizer_state.fingers[contact_id].y           = y;
+                    digitizer_report.fingers[contact_id].confidence  = !(event == UNSUPUP || event == DOWNSUP);
+                    digitizer_report.fingers[contact_id].x           = x;
+                    digitizer_report.fingers[contact_id].y           = y;
                 }
                 else {
                     uprintf("Unhandled ID: %d (%d..%d) %d\n", message.report_id, t100_subsequent_report_ids[0], t100_subsequent_report_ids[t100_num_reports], t100_subsequent_report_ids[t100_num_reports-1]);
                 }
             }
         }
+        // Microsoft require we report in 100us ticks.
+        digitizer_report.scan_time = timer_elapsed32(scan_time) * 10;
+        uprintf("Cont: %u, Time: %u\n", digitizer_report.contact_count, digitizer_report.scan_time);
     }
 
-    digitizer_state.dirty = true;
-    digitizer_flush();
-
-    return mouse_report;
+    return digitizer_report;
 }
 #endif
 
