@@ -219,9 +219,7 @@ __attribute__((weak)) void send_joystick(report_joystick_t *report) {}
 
 #ifdef DIGITIZER_ENABLE
 void host_digitizer_send(report_digitizer_t *report) {
-#    ifdef DIGITIZER_SHARED_EP
     report->report_id = REPORT_ID_DIGITIZER;
-#    endif
     send_digitizer(report);
 }
 #endif

@@ -169,7 +169,6 @@ ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
         $(call CATASTROPHIC_ERROR,Invalid DIGITIZER_DRIVER,DIGITIZER_DRIVER="$(DIGITIZER_DRIVER)" is not a valid digitizer device type)
     else
         OPT_DEFS += -DDIGITIZER_ENABLE
-        MOUSE_ENABLE := yes
         SRC += $(QUANTUM_DIR)/digitizer.c
         ifneq ($(strip $(DIGITIZER_DRIVER)), custom)
             SRC += drivers/sensors/$(strip $(DIGITIZER_DRIVER)).c
@@ -184,6 +183,9 @@ ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
     endif
     ifeq ($(DIGITIZER_DRIVER), $(POINTING_DEVICE_DRIVER))
             $(call CATASTROPHIC_ERROR,The DIGITIZER and POINTING_DEVICE features cannot both use the same driver)
+    endif
+    ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
+            $(call CATASTROPHIC_ERROR,The DIGITIZER and POINTING_DEVICE features cannot both be enabled)
     endif
 endif
 

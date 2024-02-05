@@ -26,6 +26,20 @@
  * \{
  */
 
+typedef struct {
+ #if DIGITIZER_HAS_STYLUS
+    digitizer_stylus_report_t stylus;
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+    digitizer_finger_report_t fingers[DIGITIZER_FINGER_COUNT];
+    uint16_t scan_time;
+    uint8_t  contact_count : 4;
+    uint8_t  button1 : 1;
+    uint8_t  button2 : 1;
+    uint8_t  button3 : 1;
+#endif
+} digitizer_t;
+
 /**
  * \brief Send the digitizer report to the host if it is marked as dirty.
  */
@@ -76,8 +90,8 @@ void digitizer_barrel_switch_off(void);
 void digitizer_set_position(float x, float y);
 #endif
 
-report_digitizer_t digitizer_get_report(void);
-void digitizer_set_report(report_digitizer_t digitizer_report);
+digitizer_t digitizer_get_report(void);
+void digitizer_set_report(digitizer_t digitizer_report);
 void digitizer_init(void);
 bool digitizer_task(void);
 

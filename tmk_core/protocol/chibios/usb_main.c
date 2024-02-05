@@ -257,6 +257,12 @@ static void set_led_transfer_cb(USBDriver *usbp) {
     }
 }
 
+typedef struct {
+    uint8_t report_id;
+    uint8_t contact_count_max : 4;
+    uint8_t pad_type : 4;
+} PACKED digitizer_feat_t;
+
 static bool usb_requests_hook_cb(USBDriver *usbp) {
     usb_control_request_t *setup = (usb_control_request_t *)usbp->setup;
 
@@ -286,6 +292,19 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
 #if defined(SHARED_EP_ENABLE) && !defined(KEYBOARD_SHARED_EP)
                             case SHARED_INTERFACE:
 #endif
+/*
+                                if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER_CONFIGURATION)) {
+                                    usbSetupTransfer(usbp, NULL, 0, NULL);
+                                    return true;
+                                }
+                                else if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER_FUNCTION_SWITCH)) {
+                                    usbSetupTransfer(usbp, NULL, 0, NULL);
+                                    return true;
+                                }
+                                else if (setup->wValue.hbyte != 0x3) {
+                                    //usbSetupTransfer(usbp, set_report_buf, sizeof(set_report_buf), set_led_transfer_cb);
+                                    //return true;
+                                }*/
                                 usbSetupTransfer(usbp, set_report_buf, sizeof(set_report_buf), set_led_transfer_cb);
                                 return true;
                         }

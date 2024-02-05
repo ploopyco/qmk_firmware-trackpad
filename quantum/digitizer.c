@@ -27,16 +27,14 @@
 
 typedef struct {
     void (*init)(void);
-    report_digitizer_t (*get_report)(report_digitizer_t digitizer_report);
+    digitizer_t (*get_report)(digitizer_t digitizer_report);
 } digitizer_driver_t;
-
-
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
     // TODO
 #elif defined(DIGITIZER_DRIVER_maxtouch)
     extern void pointing_device_driver_init(void);
-    extern report_digitizer_t digitizer_driver_get_report(report_digitizer_t digitizer_report);
+    extern digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report);
 
     const digitizer_driver_t digitizer_driver = {
         .init = pointing_device_driver_init,
@@ -46,169 +44,93 @@ typedef struct {
     const digitizer_driver_t digitizer_driver = {};
 #endif
 
-typedef struct {
-    report_digitizer_t  report;
-    bool                dirty;
-} digitizer_t;
+static digitizer_t digitizer_state = {};
+static bool dirty = false;
 
-digitizer_t digitizer_state = {
-    .report   = {},
-    .dirty    = false
-};
 
+#if DIGITIZER_HAS_STYLUS
 void digitizer_flush(void) {
-    if (digitizer_state.dirty) {
-        host_digitizer_send(&digitizer_state.report);
-        digitizer_state.dirty = false;
+    if (dirty) {
+        digitizer_report_t report = { .stylus = digitizer_state.stylus };
+        host_digitizer_send(&report);
+        dirty = false;
     }
 }
 
-#if DIGITIZER_HAS_STYLUS
 void digitizer_in_range_on(void) {
-    digitizer_state.report.in_range = true;
-    digitizer_state.dirty    = true;
+    digitizer_state.stylus.in_range = true;
+    dirty    = true;
     digitizer_flush();
 }
 
 void digitizer_in_range_off(void) {
-    digitizer_state.report.in_range = false;
-    digitizer_state.dirty    = true;
+    digitizer_state.stylus.in_range = false;
+    dirty    = true;
     digitizer_flush();
 }
 
 void digitizer_tip_switch_on(void) {
-    digitizer_state.report.tip   = true;
-    digitizer_state.dirty = true;
+    digitizer_state.stylus.tip   = true;
+    dirty = true;
     digitizer_flush();
 }
 
 void digitizer_tip_switch_off(void) {
-    digitizer_state.report.tip   = false;
-    digitizer_state.dirty = true;
+    digitizer_state.stylus.tip   = false;
+    dirty = true;
     digitizer_flush();
 }
 
 void digitizer_barrel_switch_on(void) {
-    digitizer_state.report.barrel = true;
-    digitizer_state.dirty  = true;
+    digitizer_state.stylus.barrel = true;
+    dirty  = true;
     digitizer_flush();
 }
 
 void digitizer_barrel_switch_off(void) {
-    digitizer_state.report.barrel = false;
-    digitizer_state.dirty  = true;
+    digitizer_state.stylus.barrel = false;
+    dirty  = true;
     digitizer_flush();
 }
 
 void digitizer_set_position(float x, float y) {
-    digitizer_state.report.x    = x;
-    digitizer_state.report.y    = y;
-    digitizer_state.dirty       = true;
+    digitizer_state.stylus.x    = x;
+    digitizer_state.stylus.y    = y;
+    dirty       = true;
     digitizer_flush();
 }
 #endif
 
-/**
- * @brief Adjust digitizer report by any optional common digitizer configuration defines
- *
- * This applies rotation or inversion to the digitizer report as selected by the digitizer common configuration defines.
- *
- * @param report_digitizer_t[in] takes a report_digitizer_t to be adjusted
- * @return report_digitizer_t with adjusted values
- */
-static report_digitizer_t digitizer_adjust_by_defines(report_digitizer_t digitizer_report) {
-    // Support rotation of the sensor data
-#if defined(DIGITIZER_ROTATION_90) || defined(DIGITIZER_ROTATION_180) || defined(DIGITIZER_ROTATION_270)
-    const report_digitizer_t original_report = digitizer_report;
-#    if defined(DIGITIZER_ROTATION_90)
-#        if DIGITIZER_HAS_STYLUS
-    digitizer_report.x = original_report.y;
-    digitizer_report.y = - original_report.x;
-#        endif
-#        if DIGITIZER_FINGER_COUNT > 0
-    for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_report.fingers[i].x = original_report.fingers[i].y;
-        digitizer_report.fingers[i].y = - original_report.fingers[i].x;
-    }
-#        endif
-#    elif defined(DIGITIZER_ROTATION_180)
-#        if DIGITIZER_HAS_STYLUS
-    digitizer_report.x = - original_report.x;
-    digitizer_report.y = - original_report.y;
-#        endif
-#        if DIGITIZER_FINGER_COUNT > 0
-    for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_report.fingers[i].x = - original_report.fingers[i].x;
-        digitizer_report.fingers[i].y = - original_report.fingers[i].y;
-    }
-#        endif
-#    elif defined(DIGITIZER_ROTATION_270)
-#        if DIGITIZER_HAS_STYLUS
-    digitizer_report.x = - original_report.y;
-    digitizer_report.y = original_report.x;
-#        endif
-#        if DIGITIZER_FINGER_COUNT > 0
-    for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_report.fingers[i].x = - original_report.fingers[i].y;
-        digitizer_report.fingers[i].y = original_report.fingers[i].x;
-    }
-#        endif
-#    else
-#        error "How the heck did you get here?!"
-#    endif
-#endif
-    // Support Inverting the X and Y Axises
-#if defined(DIGITIZER_INVERT_X)
-#    if DIGITIZER_HAS_STYLUS
-    digitizer_report.x = - digitizer_report.x;
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 0
-    for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_report.fingers[i].x = - digitizer_report.fingers[i].x;
-    }
-#    endif
-#endif
-#if defined(DIGITIZER_INVERT_Y)
-#    if DIGITIZER_HAS_STYLUS
-    digitizer_report.y = - digitizer_report.y;
-#    endif
-#    if DIGITIZER_FINGER_COUNT > 0
-    for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_report.fingers[i].y = - digitizer_report.fingers[i].y;
-    }
-#    endif
-#endif
-    return digitizer_report;
-}
-
-static bool has_digitizer_report_changed(report_digitizer_t *new_report, report_digitizer_t *old_report) {
-    return memcmp(new_report, old_report, sizeof(report_digitizer_t)) != 0;
+static bool has_digitizer_report_changed(digitizer_t *new_report, digitizer_t *old_report) {
+    return memcmp(new_report, old_report, sizeof(digitizer_t)) != 0;
 }
 
 /**
- * @brief Gets current mouse report used by pointing device task
+ * @brief Gets the current digitizer report used by the digitizer task
  *
  * @return report_mouse_t
  */
-report_digitizer_t digitizer_get_report(void) {
-    return digitizer_state.report;
+digitizer_t digitizer_get_report(void) {
+    return digitizer_state;
 }
 
 /**
- * @brief Sets mouse report used be pointing device task
+ * @brief Sets digitizer report used by the digitier task
  *
  * @param[in] mouse_report
  */
-void digitizer_set_report(report_digitizer_t digitizer_report) {
-    digitizer_state.dirty = has_digitizer_report_changed(&digitizer_state.report, &digitizer_report);
-    memcpy(&digitizer_state.report, &digitizer_report, sizeof(report_digitizer_t));
+void digitizer_set_report(digitizer_t digitizer_report) {
+    dirty |= has_digitizer_report_changed(&digitizer_state, &digitizer_report);
+    memcpy(&digitizer_state, &digitizer_report, sizeof(report_digitizer_t));
 }
 
 void digitizer_init(void) {
+#if DIGITIZER_FINGER_COUNT > 0
     // Set unique contact_ids for each finger
     for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-        digitizer_state.report.fingers[i].contact_id  = i;
+        digitizer_state.fingers[i].contact_id  = i;
     }
+#endif
     if (digitizer_driver.init) {
         digitizer_driver.init();
     }
@@ -245,19 +167,25 @@ bool digitizer_task(void) {
         if (digitizer_motion_detected())
 #endif
         {
-            uprintf("Motion detected.. %lu %d\n", readPin(DIGITIZER_MOTION_PIN), DIGITIZER_MOTION_PIN);
-            report_digitizer_t new_report = digitizer_driver.get_report(digitizer_state.report);
-            if (has_digitizer_report_changed(&new_report, &digitizer_state.report)) {
-                digitizer_state.report = new_report;
-                digitizer_state.dirty = true;
+            digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
+            report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = new_state.scan_time, .button1 = new_state.button1, .button2 = new_state.button2, .button3 = new_state.button3 };
+            int skip_count = 0;
+            for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
+                const bool contact = new_state.fingers[i].tip || (digitizer_state.fingers[i].tip != new_state.fingers[i].tip);
+                if (contact) {
+                    memcpy(&report.fingers[report.contact_count], &new_state.fingers[i], sizeof(digitizer_finger_report_t));
+                    report.contact_count ++;
+                }
+                else {
+                    report.fingers[DIGITIZER_FINGER_COUNT - skip_count - 1].contact_id = i;
+                    skip_count ++;
+                }
             }
+            report.contact_count = DIGITIZER_FINGER_COUNT;
+            host_digitizer_send(&report);
+            digitizer_state = new_state;
         }
     }
-    if (digitizer_state.dirty) {
-        report_digitizer_t transformed_report = digitizer_adjust_by_defines(digitizer_state.report);
-        host_digitizer_send(&transformed_report);
-        digitizer_state.dirty = false;
-        return true;
-    }
+
     return false;
 }

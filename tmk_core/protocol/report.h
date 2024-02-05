@@ -44,7 +44,11 @@ enum hid_report_ids {
     REPORT_ID_NKRO,
     REPORT_ID_JOYSTICK,
     REPORT_ID_DIGITIZER,
-    REPORT_ID_COUNT = REPORT_ID_DIGITIZER
+    REPORT_ID_DIGITIZER_CONFIGURATION = 11,
+    REPORT_ID_DIGITIZER_GET_FEATURE,
+    REPORT_ID_DIGITIZER_FUNCTION_SWITCH,
+    REPORT_ID_DIGITIZER_CERTIFICATE,
+    REPORT_ID_COUNT = REPORT_ID_DIGITIZER_CERTIFICATE
 };
 
 #define IS_VALID_REPORT_ID(id) ((id) >= REPORT_ID_ALL && (id) <= REPORT_ID_COUNT)
@@ -219,36 +223,38 @@ typedef struct {
     int8_t            h;
 } PACKED report_mouse_t;
 
-#if DIGITIZER_FINGER_COUNT > 0
 typedef struct {
-    uint8_t  tip : 1;
-    uint8_t  confidence : 1;
-    uint8_t  reserved : 2;
-    uint8_t  contact_id : 4;
-    uint16_t x;
-    uint16_t y;
-} PACKED report_digitizer_finger_t;
-#endif
-
-typedef struct {
-#ifdef DIGITIZER_SHARED_EP
-    uint8_t report_id;
-#endif
-#if DIGITIZER_HAS_STYLUS
     bool     in_range : 1;
     bool     tip : 1;
     bool     barrel : 1;
     uint8_t  reserved : 5;
     uint16_t x;
     uint16_t y;
+} PACKED digitizer_stylus_report_t;
+
+typedef struct {
+    uint8_t  confidence : 1;
+    uint8_t  tip : 1;
+    uint8_t  reserved : 6;
+    uint8_t  contact_id : 3;
+    uint8_t  reserved2 : 5;
+    uint16_t x;
+    uint16_t y;
+} PACKED digitizer_finger_report_t;
+
+typedef struct {
+    uint8_t report_id;
+#if DIGITIZER_HAS_STYLUS
+    digitizer_stylus_report_t stylus;
 #endif
 #if DIGITIZER_FINGER_COUNT > 0
-    report_digitizer_finger_t fingers[DIGITIZER_FINGER_COUNT];
-#endif
-#ifdef DIGITIZER_TOUCH_PAD
+    digitizer_finger_report_t fingers[DIGITIZER_FINGER_COUNT];
     uint16_t scan_time;
-    uint8_t contact_count : 4;
-    uint8_t reserved2 : 4;
+    uint8_t  contact_count : 4;
+    uint8_t  button1 : 1;
+    uint8_t  button2 : 1;
+    uint8_t  button3 : 1;
+    uint8_t reserved2 : 1;
 #endif
 } PACKED report_digitizer_t;
 
@@ -369,3 +375,6 @@ bool has_mouse_report_changed(report_mouse_t* new_report, report_mouse_t* old_re
 #ifdef __cplusplus
 }
 #endif
+
+bool get_usb_feature_report(uint8_t *const ReportID, const uint8_t ReportType, void *ReportData, uint16_t *const ReportSize);
+

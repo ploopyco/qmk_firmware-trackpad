@@ -59,15 +59,15 @@
 #endif
 
 #ifndef MXT_DEFAULT_DPI
-    #define MXT_DEFAULT_DPI 1600
+    #define MXT_DEFAULT_DPI 600
 #endif
 
 #ifndef MXT_TOUCH_THRESHOLD
-    #define MXT_TOUCH_THRESHOLD 35
+    #define MXT_TOUCH_THRESHOLD 10
 #endif
 
 #ifndef MXT_GAIN
-    #define MXT_GAIN 6
+    #define MXT_GAIN 4
 #endif
 
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
@@ -193,7 +193,7 @@ void pointing_device_driver_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        t46.inrushcfg = 7;
+        //t46.inrushcfg = 2;
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
@@ -203,7 +203,12 @@ void pointing_device_driver_init(void) {
         i2c_status_t status                 = i2c_readReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
+        // TODO: Generic handling of rotation/inversion for absolute mode?
+#ifdef DIGITIZER_INVERT_X
+        cfg.cfg1                            = T100_CFG_SWITCHXY | T100_CFG_INVERTY; // Could also handle rotation, and axis inversion in hardware here
+#else
         cfg.cfg1                            = T100_CFG_SWITCHXY; // Could also handle rotation, and axis inversion in hardware here
+#endif
         cfg.scraux                          = 0x1;  // AUX data: Report the number of touch events
         cfg.numtch                          = DIGITIZER_FINGER_COUNT;   // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
@@ -349,31 +354,33 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
 #endif
 
 #ifdef DIGITIZER_ENABLE
-report_digitizer_t digitizer_driver_get_report(report_digitizer_t digitizer_report) {
+digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
     if (t44_message_count_address) {
         mxt_message_count message_count = {};
         static uint32_t scan_time = 0;
+        static uint8_t contacts = 0;
+        static uint8_t last_contacts = 0;
 
         i2c_status_t status = i2c_readReg16(MXT336UD_ADDRESS, t44_message_count_address,
             (uint8_t *)&message_count, sizeof(mxt_message_count), MXT_I2C_TIMEOUT_MS);
         if (status == I2C_STATUS_SUCCESS) {
-
-            uprintf("Msg.. %d\n", message_count.count);
             for (int i = 0; i < message_count.count; i++) {
                 mxt_message message = {};
                 status              = i2c_readReg16(MXT336UD_ADDRESS, t5_message_processor_address,
                                         (uint8_t *)&message, sizeof(mxt_message), MXT_I2C_TIMEOUT_MS);
 
                 if (message.report_id == t100_first_report_id) {
-                    const uint8_t contacts = message.data[1];
-                    digitizer_report.contact_count = contacts;
-                    if (scan_time == 0 && contacts) {
+                    contacts = message.data[1];
+                    if (last_contacts == 0 && contacts) {
                         scan_time = timer_read32();
+                        for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
+                            digitizer_report.fingers[i].tip = 0;
+                            digitizer_report.fingers[i].confidence = 1;
+                        }
                     }
-                    if (contacts == 0) {
-                        scan_time = 0;
-                    }
+                    last_contacts = contacts;
                 }
+#if DIGITIZER_FINGER_COUNT > 0
                 else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
                          (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
                     const uint8_t contact_id    = message.report_id - t100_subsequent_report_ids[0];
@@ -383,21 +390,24 @@ report_digitizer_t digitizer_driver_get_report(report_digitizer_t digitizer_repo
                     if (event == DOWN) {
                         digitizer_report.fingers[contact_id].tip     = 1;
                     }
-                    if (event == UP) {
+                    if (event == UP || event == UNSUP || event == DOWNUP) {
                         digitizer_report.fingers[contact_id].tip     = 0;
                     }
-                    digitizer_report.fingers[contact_id].confidence  = !(event == UNSUPUP || event == DOWNSUP);
+                    digitizer_report.fingers[contact_id].confidence  = !(event == SUP || event == DOWNSUP);
                     digitizer_report.fingers[contact_id].x           = x;
                     digitizer_report.fingers[contact_id].y           = y;
                 }
+#endif
                 else {
                     uprintf("Unhandled ID: %d (%d..%d) %d\n", message.report_id, t100_subsequent_report_ids[0], t100_subsequent_report_ids[t100_num_reports], t100_subsequent_report_ids[t100_num_reports-1]);
                 }
             }
         }
+#if DIGITIZER_FINGER_COUNT > 0
         // Microsoft require we report in 100us ticks.
-        digitizer_report.scan_time = timer_elapsed32(scan_time) * 10;
-        uprintf("Cont: %u, Time: %u\n", digitizer_report.contact_count, digitizer_report.scan_time);
+        uint32_t scan = timer_elapsed32(scan_time);
+        digitizer_report.scan_time = scan * 10;
+#endif
     }
 
     return digitizer_report;

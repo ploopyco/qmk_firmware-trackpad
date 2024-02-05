@@ -10,9 +10,10 @@
         "console": true,
         "extrakey": true,
         "mousekey": true,
-        "nkro": true,
+        "nkro": false,
         "rgb_matrix": true,
-        "digitizer": true
+        "digitizer": true,
+        "pointing_device": false
     },
     "bootmagic": {
         "matrix": [ 0, 0 ]
