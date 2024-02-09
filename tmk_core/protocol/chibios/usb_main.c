@@ -292,19 +292,27 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
 #if defined(SHARED_EP_ENABLE) && !defined(KEYBOARD_SHARED_EP)
                             case SHARED_INTERFACE:
 #endif
-/*
+
+                                // Touchpad set feature reports
                                 if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER_CONFIGURATION)) {
-                                    usbSetupTransfer(usbp, NULL, 0, NULL);
+                                    // TODO: Disable the touchpad/buttons on demand from the host For now just ACK the message by
+                                    // sending back an empty packet with our report id.
+                                    usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
                                     return true;
                                 }
                                 else if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER_FUNCTION_SWITCH)) {
-                                    usbSetupTransfer(usbp, NULL, 0, NULL);
+                                    // TODO: Mode switching - Windows precision touchpads should start up reporting as a mouse, then switch
+                                    // to trackpad reports if we get asked. For now just ACK the message by sending back an empty packet
+                                    // with our report id.
+                                    usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
                                     return true;
                                 }
-                                else if (setup->wValue.hbyte != 0x3) {
-                                    //usbSetupTransfer(usbp, set_report_buf, sizeof(set_report_buf), set_led_transfer_cb);
-                                    //return true;
-                                }*/
+                                else if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER)) {
+                                    uint8_t response[] = { REPORT_ID_DIGITIZER, 2 };
+                                    usbSetupTransfer(usbp, response, 5, NULL);
+                                    return true;
+                                }
+                                // LED handling stuff
                                 usbSetupTransfer(usbp, set_report_buf, sizeof(set_report_buf), set_led_transfer_cb);
                                 return true;
                         }
