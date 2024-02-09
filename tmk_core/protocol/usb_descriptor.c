@@ -291,7 +291,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    endif
 #    if DIGITIZER_FINGER_COUNT > 0
         HID_RI_USAGE(8, 0x22),             // Finger
-        HID_RI_COLLECTION(8, 0x02),        // Logical
+        HID_RI_COLLECTION(8, 0x00),        // Physical
             HID_RI_LOGICAL_MINIMUM(8, 0x00),
             HID_RI_LOGICAL_MAXIMUM(8, 0x01),
             // Tip Switch, Confidence (2 bits)
@@ -324,14 +324,14 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_LOGICAL_MAXIMUM(16, 3685),
             HID_RI_REPORT_SIZE(8, 16),
             HID_RI_UNIT_EXPONENT(8, 0x0E), // -2
-            HID_RI_UNIT(8, 0x31),          // Inch, English Linear
+            HID_RI_UNIT(8, 0x11),          // CM, English Linear
             HID_RI_USAGE(8, 0x30),         // X
             HID_RI_PHYSICAL_MINIMUM(8, 0x0),
-            HID_RI_PHYSICAL_MAXIMUM(16, 614),
+            HID_RI_PHYSICAL_MAXIMUM(16, 1560),
             HID_RI_REPORT_COUNT(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_LOGICAL_MAXIMUM(16, 2150),
-            HID_RI_PHYSICAL_MAXIMUM(16, 358),
+            HID_RI_PHYSICAL_MAXIMUM(16, 910),
             HID_RI_USAGE(8, 0x31),         // Y
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
@@ -339,7 +339,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    if DIGITIZER_FINGER_COUNT > 1
         HID_RI_USAGE_PAGE(8, 0x0D),        // Digitizers
         HID_RI_USAGE(8, 0x22),             // Finger
-        HID_RI_COLLECTION(8, 0x02),        // Logical
+        HID_RI_COLLECTION(8, 0x00),        // Physical
             HID_RI_LOGICAL_MINIMUM(8, 0x00),
             HID_RI_LOGICAL_MAXIMUM(8, 0x01),
             // Tip Switch, Confidence (2 bits)
@@ -372,14 +372,14 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_LOGICAL_MAXIMUM(16, 3685),
             HID_RI_REPORT_SIZE(8, 16),
             HID_RI_UNIT_EXPONENT(8, 0x0E), // -2
-            HID_RI_UNIT(8, 0x31),          // Inch, English Linear
+            HID_RI_UNIT(8, 0x11),          // CM, English Linear
             HID_RI_USAGE(8, 0x30),         // X
             HID_RI_PHYSICAL_MINIMUM(8, 0x0),
-            HID_RI_PHYSICAL_MAXIMUM(16, 614),
+            HID_RI_PHYSICAL_MAXIMUM(16, 1560),
             HID_RI_REPORT_COUNT(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_LOGICAL_MAXIMUM(16, 2150),
-            HID_RI_PHYSICAL_MAXIMUM(16, 358),
+            HID_RI_PHYSICAL_MAXIMUM(16, 910),
             HID_RI_USAGE(8, 0x31),         // Y
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
@@ -387,7 +387,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    if DIGITIZER_FINGER_COUNT > 2
         HID_RI_USAGE_PAGE(8, 0x0D),        // Digitizers
         HID_RI_USAGE(8, 0x22),             // Finger
-        HID_RI_COLLECTION(8, 0x02),        // Logical
+        HID_RI_COLLECTION(8, 0x00),        // Physical
             HID_RI_LOGICAL_MINIMUM(8, 0x00),
             HID_RI_LOGICAL_MAXIMUM(8, 0x01),
             // Tip Switch, Confidence (2 bits)
@@ -420,14 +420,14 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_LOGICAL_MAXIMUM(16, 3685),
             HID_RI_REPORT_SIZE(8, 16),
             HID_RI_UNIT_EXPONENT(8, 0x0E), // -2
-            HID_RI_UNIT(8, 0x31),          // Inch, English Linear
+            HID_RI_UNIT(8, 0x11),          // CM, English Linear
             HID_RI_USAGE(8, 0x30),         // X
             HID_RI_PHYSICAL_MINIMUM(8, 0x0),
-            HID_RI_PHYSICAL_MAXIMUM(16, 614),
+            HID_RI_PHYSICAL_MAXIMUM(16, 1560),
             HID_RI_REPORT_COUNT(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_LOGICAL_MAXIMUM(16, 2150),
-            HID_RI_PHYSICAL_MAXIMUM(16, 358),
+            HID_RI_PHYSICAL_MAXIMUM(16, 910),
             HID_RI_USAGE(8, 0x31),         // Y
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
@@ -435,7 +435,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    if DIGITIZER_FINGER_COUNT > 3
         HID_RI_USAGE_PAGE(8, 0x0D),        // Digitizers
         HID_RI_USAGE(8, 0x22),             // Finger
-        HID_RI_COLLECTION(8, 0x02),        // Logical
+        HID_RI_COLLECTION(8, 0x00),        // Physical
             HID_RI_LOGICAL_MINIMUM(8, 0x00),
             HID_RI_LOGICAL_MAXIMUM(8, 0x01),
             // Tip Switch, Confidence (2 bits)
@@ -468,14 +468,14 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_LOGICAL_MAXIMUM(16, 3685),
             HID_RI_REPORT_SIZE(8, 16),
             HID_RI_UNIT_EXPONENT(8, 0x0E), // -2
-            HID_RI_UNIT(8, 0x31),          // Inch, English Linear
+            HID_RI_UNIT(8, 0x11),          // CM, English Linear
             HID_RI_USAGE(8, 0x30),         // X
             HID_RI_PHYSICAL_MINIMUM(8, 0x0),
-            HID_RI_PHYSICAL_MAXIMUM(16, 614),
+            HID_RI_PHYSICAL_MAXIMUM(16, 1560),
             HID_RI_REPORT_COUNT(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_LOGICAL_MAXIMUM(16, 2150),
-            HID_RI_PHYSICAL_MAXIMUM(16, 358),
+            HID_RI_PHYSICAL_MAXIMUM(16, 910),
             HID_RI_USAGE(8, 0x31),         // Y
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
@@ -483,7 +483,7 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
 #    if DIGITIZER_FINGER_COUNT > 4
         HID_RI_USAGE_PAGE(8, 0x0D),        // Digitizers
         HID_RI_USAGE(8, 0x22),             // Finger
-        HID_RI_COLLECTION(8, 0x02),        // Logical
+        HID_RI_COLLECTION(8, 0x00),        // Physical
             HID_RI_LOGICAL_MINIMUM(8, 0x00),
             HID_RI_LOGICAL_MAXIMUM(8, 0x01),
             // Tip Switch, Confidence (2 bits)
@@ -516,14 +516,14 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
             HID_RI_LOGICAL_MAXIMUM(16, 3685),
             HID_RI_REPORT_SIZE(8, 16),
             HID_RI_UNIT_EXPONENT(8, 0x0E), // -2
-            HID_RI_UNIT(8, 0x31),          // Inch, English Linear
+            HID_RI_UNIT(8, 0x11),          // CM, English Linear
             HID_RI_USAGE(8, 0x30),         // X
             HID_RI_PHYSICAL_MINIMUM(8, 0x0),
-            HID_RI_PHYSICAL_MAXIMUM(16, 614),
+            HID_RI_PHYSICAL_MAXIMUM(16, 1560),
             HID_RI_REPORT_COUNT(8, 0x01),
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
             HID_RI_LOGICAL_MAXIMUM(16, 2150),
-            HID_RI_PHYSICAL_MAXIMUM(16, 358),
+            HID_RI_PHYSICAL_MAXIMUM(16, 910),
             HID_RI_USAGE(8, 0x31),         // Y
             HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
         HID_RI_END_COLLECTION(0),
@@ -562,10 +562,19 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM SharedReport[] = {
         HID_RI_USAGE_PAGE(8, 0x0D),    // Digitizers
         HID_RI_REPORT_ID(8, REPORT_ID_DIGITIZER_GET_FEATURE),
         HID_RI_USAGE(8, 0x55),         // Contact Count Maximum
-        HID_RI_USAGE(8, 0x59),         // Pad type
         HID_RI_REPORT_SIZE(8, 0x04),
-        HID_RI_REPORT_COUNT(8, 0x02),
+        HID_RI_REPORT_COUNT(8, 0x01),
         HID_RI_LOGICAL_MAXIMUM(8, 15),
+        HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_USAGE(8, 0x59),         // Pad type
+        HID_RI_REPORT_SIZE(8, 0x03),
+        HID_RI_REPORT_COUNT(8, 0x01),
+        HID_RI_LOGICAL_MAXIMUM(8, 7),
+        HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_USAGE(8, 0x57),         // Surface switch - Apple want this, not sure if they are happy with the collection below
+        HID_RI_REPORT_SIZE(8, 0x01),
+        HID_RI_REPORT_COUNT(8, 0x01),
+        HID_RI_LOGICAL_MAXIMUM(8, 1),
         HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
 
         HID_RI_USAGE_PAGE(16, 0xFF),           // Vendor

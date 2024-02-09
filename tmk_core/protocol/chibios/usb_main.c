@@ -260,7 +260,8 @@ static void set_led_transfer_cb(USBDriver *usbp) {
 typedef struct {
     uint8_t report_id;
     uint8_t contact_count_max : 4;
-    uint8_t pad_type : 4;
+    uint8_t pad_type : 3;
+    uint8_t surface_switch : 1;
 } PACKED digitizer_feat_t;
 
 static bool usb_requests_hook_cb(USBDriver *usbp) {
@@ -304,6 +305,12 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
                                     // TODO: Mode switching - Windows precision touchpads should start up reporting as a mouse, then switch
                                     // to trackpad reports if we get asked. For now just ACK the message by sending back an empty packet
                                     // with our report id.
+                                    usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
+                                    return true;
+                                }
+                                else if (setup->wValue.hbyte == 0x3 && setup->wValue.lbyte == REPORT_ID_DIGITIZER_GET_FEATURE) {
+                                    // TODO: do hosts ever call set on the touchpad feature?
+                                    // For now just ACK the message by sending back an empty packet with our report id.
                                     usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
                                     return true;
                                 }
