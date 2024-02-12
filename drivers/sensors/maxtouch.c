@@ -18,15 +18,6 @@
 #define SAMPLES_TO_CPI(samples, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((samples) * 254, (dist_in_mm) * 10))
 #define SWAP_BYTES(a) ((a << 8) | (a >> 8))
 
-// TODO: These are peacock specific, they are used for handling CPI calculations. Is there a better default?
-#ifndef MXT_SENSOR_WIDTH
-#   define MXT_SENSOR_WIDTH 156
-#endif
-
-#ifndef MXT_SENSOR_HEIGHT
-#   define MXT_SENSOR_HEIGHT 91
-#endif
-
 // By default we assume all available X and Y pins are in use, but a designer
 // may decide to leave some pins unconnected, so the size can be overridden here.
 #ifndef MXT_MATRIX_X_SIZE
@@ -213,8 +204,8 @@ void pointing_device_driver_init(void) {
         cfg.numtch                          = DIGITIZER_FINGER_COUNT;   // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
         cfg.ysize                           = MXT_MATRIX_Y_SIZE;    // Make configurable as this depends on the sensor design.
-        cfg.xpitch                          = MXT_SENSOR_WIDTH / MXT_MATRIX_X_SIZE;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
-        cfg.ypitch                          = MXT_SENSOR_HEIGHT / MXT_MATRIX_Y_SIZE;    // Pitch between Y-Lines (5mm + 0.1mm * YPitch).
+        cfg.xpitch                          = MXT_SENSOR_WIDTH_MM / MXT_MATRIX_X_SIZE;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
+        cfg.ypitch                          = MXT_SENSOR_HEIGHT_MM / MXT_MATRIX_Y_SIZE;    // Pitch between Y-Lines (5mm + 0.1mm * YPitch).
         cfg.gain                            = MXT_GAIN; // Single transmit gain for mutual capacitance measurements
         cfg.dxgain                          = 255;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
         cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
@@ -223,8 +214,8 @@ void pointing_device_driver_init(void) {
         cfg.movsmooth                       = 224;
         cfg.movfilter                       = 4;
 
-        cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT);    // CPI handling, adjust the reported resolution
-        cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH);     // CPI handling, adjust the reported resolution
+        cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
+        cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
     
         status                              = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
@@ -357,9 +348,6 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
 digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
     if (t44_message_count_address) {
         mxt_message_count message_count = {};
-        static uint32_t scan_time = 0;
-        static uint8_t contacts = 0;
-        static uint8_t last_contacts = 0;
 
         i2c_status_t status = i2c_readReg16(MXT336UD_ADDRESS, t44_message_count_address,
             (uint8_t *)&message_count, sizeof(mxt_message_count), MXT_I2C_TIMEOUT_MS);
@@ -370,15 +358,7 @@ digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
                                         (uint8_t *)&message, sizeof(mxt_message), MXT_I2C_TIMEOUT_MS);
 
                 if (message.report_id == t100_first_report_id) {
-                    contacts = message.data[1];
-                    if (last_contacts == 0 && contacts) {
-                        scan_time = timer_read32();
-                        for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
-                            digitizer_report.fingers[i].tip = 0;
-                            digitizer_report.fingers[i].confidence = 1;
-                        }
-                    }
-                    last_contacts = contacts;
+                    // Unused for now
                 }
 #if DIGITIZER_FINGER_COUNT > 0
                 else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
@@ -403,11 +383,6 @@ digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
                 }
             }
         }
-#if DIGITIZER_FINGER_COUNT > 0
-        // Microsoft require we report in 100us ticks.
-        uint32_t scan = timer_elapsed32(scan_time);
-        digitizer_report.scan_time = scan * 10;
-#endif
     }
 
     return digitizer_report;
@@ -425,8 +400,8 @@ void pointing_device_driver_set_cpi(uint16_t new_cpi) {
         mxt_touch_multiscreen_t100 cfg  = {};
         i2c_status_t status             = i2c_readReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address, 
                                             (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
-        cfg.xrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT);
-        cfg.yrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH);
+        cfg.xrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);
+        cfg.yrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);
         status                          = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                             (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         if (status != I2C_STATUS_SUCCESS) {

@@ -7,6 +7,16 @@
 #define MXT_I2C_TIMEOUT_MS 20
 #define MXT_REG_INFORMATION_BLOCK (0)
 
+
+// TODO: These are peacock specific, they are used for handling CPI calculations. Is there a better default?
+#ifndef MXT_SENSOR_WIDTH_MM
+#   define MXT_SENSOR_WIDTH_MM 156
+#endif
+
+#ifndef MXT_SENSOR_HEIGHT_MM
+#   define MXT_SENSOR_HEIGHT_MM 91
+#endif
+
 // Object table entries cannot be read individually, we have to read starting at the
 // beginning of an object. For now we will allocate a large object on the stack, but
 // a general purpose I2C buffer might be a better approach if other interesting objects
@@ -71,12 +81,12 @@ typedef struct PACKED {
     unsigned char actvaqintfine;
 } mxt_gen_powerconfig_t7;
 
-const unsigned char T7_CFG_INITACTV = 0x80;
-const unsigned char T7_CFG_OVFRPTSUP = 0x40;
-const unsigned char T7_CFG_ACTV2IDLETOMSB_SHIFT = 2;
-const unsigned char T7_CFG_ACTV2IDLETOMSB_MASK = 0x3C;
-const unsigned char T7_CFG_ACTVPIPEEN = 0x2;
-const unsigned char T7_CFG_IDLEPIPEEN = 0x1;
+static const unsigned char T7_CFG_INITACTV = 0x80;
+static const unsigned char T7_CFG_OVFRPTSUP = 0x40;
+static const unsigned char T7_CFG_ACTV2IDLETOMSB_SHIFT = 2;
+static const unsigned char T7_CFG_ACTV2IDLETOMSB_MASK = 0x3C;
+static const unsigned char T7_CFG_ACTVPIPEEN = 0x2;
+static const unsigned char T7_CFG_IDLEPIPEEN = 0x1;
 
 typedef struct PACKED {
     unsigned char chrgtime;
@@ -175,17 +185,17 @@ typedef struct PACKED {
     unsigned char jlmmovintthr;
 } mxt_touch_multiscreen_t100;
 
-const unsigned char T100_CTRL_SCANEN = 0x80;
-const unsigned char T100_CTRL_DISSCRMSG0 = 0x4;
-const unsigned char T100_CTRL_RPTEN = 0x2;
-const unsigned char T100_CTRL_ENABLE = 0x1;
-
-const unsigned char T100_CFG_INVERTX= 0x80;
-const unsigned char T100_CFG_INVERTY = 0x40;
-const unsigned char T100_CFG_SWITCHXY = 0x20;
-const unsigned char T100_CFG_DISLOCK = 0x10;
-const unsigned char T100_CFG_ATCHTHRSEL = 0x8;
-const unsigned char T100_CFG_RPTEACHCYCLE = 0x1;
+static const unsigned char T100_CTRL_SCANEN = 0x80;
+static const unsigned char T100_CTRL_DISSCRMSG0 = 0x4;
+static const unsigned char T100_CTRL_RPTEN = 0x2;
+static const unsigned char T100_CTRL_ENABLE = 0x1;
+ 
+static const unsigned char T100_CFG_INVERTX= 0x80;
+static const unsigned char T100_CFG_INVERTY = 0x40;
+static const unsigned char T100_CFG_SWITCHXY = 0x20;
+static const unsigned char T100_CFG_DISLOCK = 0x10;
+static const unsigned char T100_CFG_ATCHTHRSEL = 0x8;
+static const unsigned char T100_CFG_RPTEACHCYCLE = 0x1;
 
 
 // Touch events reported in the t100 messages

@@ -32,8 +32,6 @@ typedef struct {
 #endif
 #if DIGITIZER_FINGER_COUNT > 0
     digitizer_finger_report_t fingers[DIGITIZER_FINGER_COUNT];
-    uint16_t scan_time;
-    uint8_t  contact_count : 4;
     uint8_t  button1 : 1;
     uint8_t  button2 : 1;
     uint8_t  button3 : 1;

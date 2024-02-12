@@ -31,7 +31,40 @@ typedef struct {
 } digitizer_driver_t;
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
-    // TODO
+#include "drivers/sensors/azoteq_iqs5xx.h"
+#include "wait.h"
+
+static i2c_status_t azoteq_iqs5xx_init_status = 1;
+    void azoteq_iqs5xx_init(void) {
+        i2c_init();
+        azoteq_iqs5xx_wake();
+        azoteq_iqs5xx_reset_suspend(true, false, true);
+        wait_ms(100);
+        azoteq_iqs5xx_wake();
+        if (azoteq_iqs5xx_get_product() != AZOTEQ_IQS5XX_UNKNOWN) {
+            azoteq_iqs5xx_setup_resolution();
+            azoteq_iqs5xx_init_status = azoteq_iqs5xx_set_report_rate(AZOTEQ_IQS5XX_REPORT_RATE, AZOTEQ_IQS5XX_ACTIVE, false);
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_event_mode(false, false);
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_reati(true, false);
+    #    if defined(AZOTEQ_IQS5XX_ROTATION_90)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(false, true, true, true, false);
+    #    elif defined(AZOTEQ_IQS5XX_ROTATION_180)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(true, true, false, true, false);
+    #    elif defined(AZOTEQ_IQS5XX_ROTATION_270)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(true, false, true, true, false);
+    #    else
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(false, false, false, true, false);
+    #    endif
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_gesture_config(true);
+            wait_ms(AZOTEQ_IQS5XX_REPORT_RATE + 1);
+        }
+    };
+    extern digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report);
+
+    const digitizer_driver_t digitizer_driver = {
+        .init = azoteq_iqs5xx_init,
+        .get_report = digitizer_driver_get_report
+    };
 #elif defined(DIGITIZER_DRIVER_maxtouch)
     extern void pointing_device_driver_init(void);
     extern digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report);
@@ -102,7 +135,16 @@ void digitizer_set_position(float x, float y) {
 #endif
 
 static bool has_digitizer_report_changed(digitizer_t *new_report, digitizer_t *old_report) {
-    return memcmp(new_report, old_report, sizeof(digitizer_t)) != 0;
+    int cmp = 0;
+    if (new_report != NULL && old_report != NULL) {
+#if DIGITIZER_STYLUS
+        cmp |= memcmp(&(new_report->stylus), &(old_report->stylus), sizeof(digitizer_stylus_report_t));
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+        cmp |= memcmp(new_report->fingers, old_report->fingers, sizeof(digitizer_finger_report_t) * DIGITIZER_FINGER_COUNT);
+#endif
+    }
+    return cmp != 0;
 }
 
 /**
@@ -121,7 +163,12 @@ digitizer_t digitizer_get_report(void) {
  */
 void digitizer_set_report(digitizer_t digitizer_report) {
     dirty |= has_digitizer_report_changed(&digitizer_state, &digitizer_report);
-    memcpy(&digitizer_state, &digitizer_report, sizeof(report_digitizer_t));
+#if DIGITIZER_STYLUS
+    memcpy(&digitizer_state.stylus, &digitizer_report.stylus, sizeof(digitizer_stylus_report_t));
+#endif
+#if DIGITIZER_FINGER_COUNT > 0
+    memcpy(digitizer_state.fingers, digitizer_report.fingers, sizeof(digitizer_finger_report_t) * DIGITIZER_FINGER_COUNT);
+#endif
 }
 
 void digitizer_init(void) {
@@ -168,7 +215,7 @@ bool digitizer_task(void) {
 #endif
         {
             digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
-            report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = new_state.scan_time, .button1 = new_state.button1, .button2 = new_state.button2, .button3 = new_state.button3 };
+            report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = 0, .button1 = new_state.button1, .button2 = new_state.button2, .button3 = new_state.button3 };
             int skip_count = 0;
             for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
                 const bool contact = new_state.fingers[i].tip || (digitizer_state.fingers[i].tip != new_state.fingers[i].tip);
@@ -184,6 +231,23 @@ bool digitizer_task(void) {
             report.contact_count = DIGITIZER_FINGER_COUNT;
             host_digitizer_send(&report);
             digitizer_state = new_state;
+
+
+#if DIGITIZER_FINGER_COUNT > 0
+            uint32_t scan_time = 0;
+            static int last_contacts = 0;
+
+            // Reset the scan_time after a period of inactivity - for now any time when there are no contacts
+            // is treated as a period of inactivity - but we should consider waiting a little longer.
+            if (last_contacts == 0 && report.contact_count) {
+                scan_time = timer_read32();
+            }
+            last_contacts = report.contact_count;
+
+            // Microsoft require we report in 100us ticks. TODO: Move.
+            uint32_t scan = timer_elapsed32(scan_time);
+            report.scan_time = scan * 10;
+#endif
         }
     }
 
