@@ -19,6 +19,9 @@
 #include "host.h"
 #include "timer.h"
 #include "gpio.h"
+#ifdef MOUSEKEY_ENABLE
+#    include "mousekey.h"
+#endif
 
 #ifdef DIGITIZER_MOTION_PIN
 #    undef DIGITIZER_TASK_THROTTLE_MS
@@ -201,9 +204,12 @@ __attribute__((weak)) bool digitizer_motion_detected(void) {
 #endif
 
 bool digitizer_task(void) {
-
+    bool updated_report = false;
+    static int last_contacts = 0;
+    report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = 0, .button1 = digitizer_state.button1, .button2 = digitizer_state.button2, .button3 = digitizer_state.button3 };
 #if DIGITIZER_TASK_THROTTLE_MS
     static uint32_t last_exec = 0;
+
     if (timer_elapsed32(last_exec) < DIGITIZER_TASK_THROTTLE_MS) {
         return false;
     }
@@ -215,7 +221,6 @@ bool digitizer_task(void) {
 #endif
         {
             digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
-            report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = 0, .button1 = new_state.button1, .button2 = new_state.button2, .button3 = new_state.button3 };
             int skip_count = 0;
             for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
                 const bool contact = new_state.fingers[i].tip || (digitizer_state.fingers[i].tip != new_state.fingers[i].tip);
@@ -229,13 +234,11 @@ bool digitizer_task(void) {
                 }
             }
             report.contact_count = DIGITIZER_FINGER_COUNT;
-            host_digitizer_send(&report);
             digitizer_state = new_state;
-
+            updated_report = true;
 
 #if DIGITIZER_FINGER_COUNT > 0
             uint32_t scan_time = 0;
-            static int last_contacts = 0;
 
             // Reset the scan_time after a period of inactivity - for now any time when there are no contacts
             // is treated as a period of inactivity - but we should consider waiting a little longer.
@@ -249,6 +252,37 @@ bool digitizer_task(void) {
             report.scan_time = scan * 10;
 #endif
         }
+    }
+
+#ifdef MOUSEKEY_ENABLE
+    const report_mouse_t mousekey_report = mousekey_get_report();
+    const bool button1 = !!(mousekey_report.buttons & 0x1);
+    const bool button2 = !!(mousekey_report.buttons & 0x2);
+    const bool button3 = !!(mousekey_report.buttons & 0x4);
+    bool button_state_changed = false;
+
+    if (digitizer_state.button1 != button1) {
+        digitizer_state.button1 = report.button1 = button1;
+        button_state_changed = true;
+    }
+    if (digitizer_state.button2 != button2) {
+        digitizer_state.button2 = report.button2 = button2;
+        button_state_changed = true;
+    }
+    if (digitizer_state.button3 != button3) {
+        digitizer_state.button3 = report.button3 = button3;
+        button_state_changed = true;
+    }
+
+    // Always send some sort of finger state along with the changed buttons
+    if (!updated_report && button_state_changed) {
+        memcpy(report.fingers, digitizer_state.fingers, sizeof(digitizer_finger_report_t) * DIGITIZER_FINGER_COUNT);
+        report.contact_count = last_contacts;
+    }
+#endif
+
+    if (updated_report || button_state_changed) {
+        host_digitizer_send(&report);
     }
 
     return false;

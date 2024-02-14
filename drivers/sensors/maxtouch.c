@@ -54,7 +54,7 @@
 #endif
 
 #ifndef MXT_TOUCH_THRESHOLD
-    #define MXT_TOUCH_THRESHOLD 10
+    #define MXT_TOUCH_THRESHOLD 14
 #endif
 
 #ifndef MXT_GAIN
@@ -184,7 +184,6 @@ void pointing_device_driver_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        //t46.inrushcfg = 2;
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
@@ -213,6 +212,8 @@ void pointing_device_driver_init(void) {
         cfg.mrghyst                         = 5;    // Merge threshold hysteresis
         cfg.movsmooth                       = 224;
         cfg.movfilter                       = 4;
+        cfg.tchdiup                         = 4;
+        cfg.tchdidown                       = 2;
 
         cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
         cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
