@@ -4,6 +4,13 @@
     "maintainer": "george-norton",
     "processor": "RP2040",
     "bootloader": "rp2040",
+    "encoder": {
+        "enabled": true,
+        "rotary": [
+            {"pin_a": "GP20", "pin_b": "GP19"},
+            {"pin_a": "GP18", "pin_b": "GP17"}
+        ]
+    },
     "features": {
         "bootmagic": true,
         "command": false,
