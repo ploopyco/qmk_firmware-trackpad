@@ -54,11 +54,15 @@
 #endif
 
 #ifndef MXT_TOUCH_THRESHOLD
-    #define MXT_TOUCH_THRESHOLD 14
+    #define MXT_TOUCH_THRESHOLD 18
 #endif
 
 #ifndef MXT_GAIN
     #define MXT_GAIN 4
+#endif
+
+#ifndef MXT_DX_GAIN
+    #define MXT_DX_GAIN 255
 #endif
 
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
@@ -206,12 +210,14 @@ void pointing_device_driver_init(void) {
         cfg.xpitch                          = MXT_SENSOR_WIDTH_MM / MXT_MATRIX_X_SIZE;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
         cfg.ypitch                          = MXT_SENSOR_HEIGHT_MM / MXT_MATRIX_Y_SIZE;    // Pitch between Y-Lines (5mm + 0.1mm * YPitch).
         cfg.gain                            = MXT_GAIN; // Single transmit gain for mutual capacitance measurements
-        cfg.dxgain                          = 255;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
+        cfg.dxgain                          = MXT_DX_GAIN;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
         cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
         cfg.mrgthr                          = 5;    // Merge threshold
         cfg.mrghyst                         = 5;    // Merge threshold hysteresis
         cfg.movsmooth                       = 224;
         cfg.movfilter                       = 4;
+        cfg.movhystn                        = 4;
+        cfg.movhysti                        = 50;
         cfg.tchdiup                         = 4;
         cfg.tchdidown                       = 2;
 
