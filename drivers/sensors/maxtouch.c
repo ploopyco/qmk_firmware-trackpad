@@ -214,12 +214,15 @@ void pointing_device_driver_init(void) {
         cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
         cfg.mrgthr                          = 5;    // Merge threshold
         cfg.mrghyst                         = 5;    // Merge threshold hysteresis
-        cfg.movsmooth                       = 224;
-        cfg.movfilter                       = 4;
-        cfg.movhystn                        = 4;
-        cfg.movhysti                        = 50;
-        cfg.tchdiup                         = 4;
-        cfg.tchdidown                       = 2;
+        cfg.movsmooth                       = 192;  // The amount of smoothing applied to movements, this tails off at higher speeds
+        cfg.movfilter                       = 4 & 0xF;  // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
+
+        // These two fields implement a simgple filter for reducing jitter, but large values cause the pointer to stick in place before moving.
+        cfg.movhysti                        = 3;    // Initial movement hysteresis
+        cfg.movhystn                        = 1;    // Next movement hysteresis
+
+        cfg.tchdiup                         = 4;    // Up touch detection integration - the number of cycles before the sensor decides an up event has occured
+        cfg.tchdidown                       = 2;    // Down touch detection integration - the number of cycles before the sensor decides an down event has occured
 
         cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
         cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
