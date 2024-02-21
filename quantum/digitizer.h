@@ -93,4 +93,11 @@ void digitizer_set_report(digitizer_t digitizer_report);
 void digitizer_init(void);
 bool digitizer_task(void);
 
+#if defined(SPLIT_DIGITIZER_ENABLE)
+void     digitizer_set_shared_report(digitizer_t report);
+#    if !defined(DIGITIZER_TASK_THROTTLE_MS)
+#        define DIGITIZER_TASK_THROTTLE_MS 1
+#    endif
+#endif     // defined(SPLIT_DIGITIZER_ENABLE)
+
 /** \} */

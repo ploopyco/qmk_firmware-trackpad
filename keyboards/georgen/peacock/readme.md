@@ -1,6 +1,6 @@
 # Peacock
 
-![georgen/peacock](imgur.com image replace me!)
+![georgen/peacock](https://github.com/george-norton/peacock/blob/main/images/complete.jpg)
 
 Peacock is a QMK powered standalone 7" trackpad. The board features a macropad with 5 switches and 2 encoders and a completly custom designed trackpad. The two parts of the board are connected using ![a VIK interface](https://github.com/sadekbaroudi/vik/blob/master/README.md) so the trackpad could also be used with different VIK compatible keyboards or controllers.
 

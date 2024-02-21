@@ -19,6 +19,7 @@
 #include "host.h"
 #include "timer.h"
 #include "gpio.h"
+#include "keyboard.h"
 #ifdef MOUSEKEY_ENABLE
 #    include "mousekey.h"
 #endif
@@ -27,6 +28,11 @@
 #    undef DIGITIZER_TASK_THROTTLE_MS
 #endif
 
+#if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
+#    ifndef SPLIT_DIGITIZER_ENABLE
+#        error "Using DIGITIZER_LEFT or DIGITIZER_RIGHT, then SPLIT_DIGITIZER_ENABLE is required but has not been defined"
+#    endif
+#endif
 
 typedef struct {
     void (*init)(void);
@@ -83,6 +89,27 @@ static i2c_status_t azoteq_iqs5xx_init_status = 1;
 static digitizer_t digitizer_state = {};
 static bool dirty = false;
 
+#if defined(SPLIT_DIGITIZER_ENABLE)
+
+#    if defined(DIGITIZER_LEFT)
+#        define DIGITIZER_THIS_SIDE is_keyboard_left()
+#    elif defined(DIGITIZER_RIGHT)
+#        define DIGITIZER_THIS_SIDE !is_keyboard_left()
+#    endif
+
+digitizer_t shared_digitizer_report = {};
+
+/**
+ * @brief Sets the shared digitizer report used by digitizer device task
+ *
+ * NOTE : Only available when using SPLIT_DIGITIZER_ENABLE
+ *
+ * @param[in] report digitizer_t
+ */
+void digitizer_set_shared_report(digitizer_t report) {
+    shared_digitizer_report = report;
+}
+#endif     // defined(SPLIT_DIGITIZER_ENABLE)
 
 #if DIGITIZER_HAS_STYLUS
 void digitizer_flush(void) {
@@ -175,6 +202,10 @@ void digitizer_set_report(digitizer_t digitizer_report) {
 }
 
 void digitizer_init(void) {
+#if defined(SPLIT_POINTING_ENABLE)
+    if (!(POINTING_DEVICE_THIS_SIDE))
+        return;
+#endif
 #if DIGITIZER_FINGER_COUNT > 0
     // Set unique contact_ids for each finger
     for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
@@ -220,7 +251,16 @@ bool digitizer_task(void) {
         if (digitizer_motion_detected())
 #endif
         {
+
+#if defined(SPLIT_DIGITIZER_ENABLE)
+#    if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
+            digitizer_t new_state = DIGITIZER_THIS_SIDE ? digitizer_driver.get_report(digitizer_state) : shared_digitizer_report;
+#    else
+#        error "You need to define the side(s) the digitizer is on. DIGITIZER_LEFT / DIGITIZER_RIGHT"
+#    endif
+#else
             digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
+#endif
             int skip_count = 0;
             for (int i = 0; i < DIGITIZER_FINGER_COUNT; i++) {
                 const bool contact = new_state.fingers[i].tip || (digitizer_state.fingers[i].tip != new_state.fingers[i].tip);
