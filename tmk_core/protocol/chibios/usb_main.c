@@ -62,6 +62,10 @@ static bool __attribute__((__unused__)) send_report_buffered(usb_endpoint_in_lut
 static void __attribute__((__unused__)) flush_report_buffered(usb_endpoint_in_lut_t endpoint, bool padded);
 static bool __attribute__((__unused__)) receive_report(usb_endpoint_out_lut_t endpoint, void *report, size_t size);
 
+#ifdef DIGITIZER_ENABLE
+    extern bool digitizer_send_mouse_reports;
+#endif
+
 /* ---------------------------------------------------------
  *            Descriptors and USB driver objects
  * ---------------------------------------------------------
@@ -305,6 +309,12 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
                                     // TODO: Mode switching - Windows precision touchpads should start up reporting as a mouse, then switch
                                     // to trackpad reports if we get asked. For now just ACK the message by sending back an empty packet
                                     // with our report id.
+                                    // TODO: What size should this buffer be?
+                                    uint8_t buffer[128] = {};
+                                    usbReadSetup(usbp, DIGITIZER_IN_EPNUM, buffer);
+                                    if (buffer[3] ==0x3) {
+                                        digitizer_send_mouse_reports = false;
+                                    }
                                     usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
                                     return true;
                                 }
