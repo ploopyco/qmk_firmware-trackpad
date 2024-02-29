@@ -452,11 +452,12 @@ bool digitizer_task(void) {
 #if DIGITIZER_FINGER_COUNT > 0
             uint32_t scan_time = 0;
 
-            // Reset the scan_time after a period of inactivity - for now any time when there are no contacts
-            // is treated as a period of inactivity - but maybe we should consider waiting a little longer.
-            if (last_contacts == 0 && contacts) {
+            // Reset the scan_time after a period of inactivity (1000ms with no contacts)
+            static uint32_t inactivity_timer = 0;
+            if (last_contacts == 0 && contacts && timer_elapsed32(inactivity_timer) > 1000) {
                 scan_time = timer_read32();
             }
+            inactivity_timer = timer_read32();
             last_contacts = contacts;
 
             // Microsoft require we report in 100us ticks. TODO: Move.
