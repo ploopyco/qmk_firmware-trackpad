@@ -56,7 +56,6 @@ typedef struct {
 } digitizer_driver_t;
 
 bool digitizer_send_mouse_reports = true;
-static bool process_one_more_event = false;
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
 #include "drivers/sensors/azoteq_iqs5xx.h"
@@ -284,17 +283,47 @@ digitizer_t process_mousekeys(report_digitizer_t report) {
 }
 #endif
 
+typedef enum {
+    NO_GESTURE,
+    POSSIBLE_TAP,
+    HOLD,
+    DOUBLE_TAP,
+    RIGHT_CLICK
+} gesture_state;
+
+
+static gesture_state gesture = NO_GESTURE;
+static int tap_time = 0;
+
+static bool update_gesture_state(void) {
+    if (digitizer_send_mouse_reports) {
+        if (gesture == POSSIBLE_TAP) {
+            const uint32_t duration = timer_elapsed32(tap_time);
+            if (duration >= DIGITIZER_MOUSE_TAP_HOLD_TIME) {
+                gesture = NO_GESTURE;
+                return true;
+            }
+        }
+        if (gesture == DOUBLE_TAP) {
+            gesture = POSSIBLE_TAP;
+            return true;
+        }
+        if (gesture == RIGHT_CLICK) {
+            gesture = NO_GESTURE;
+            return true;
+        }
+    }
+    return false;
+}
+
 // We can fallback to reporting as a mouse for hosts which do not implement trackpad support
-void send_mouse_report(report_digitizer_t* report) {
+static void send_mouse_report(report_digitizer_t* report) {
     static report_digitizer_t last_report = {};
 
     // Some state held to perform basic gesture detection
     static int contact_start_time = 0;
     static int contact_start_x = 0;
     static int contact_start_y = 0;
-    static int tap_time = 0;
-    static bool tapped = false;
-    static bool button1_held = false;
     static uint8_t max_contacts = 0;
 
     report_mouse_t mouse_report = {};
@@ -311,7 +340,6 @@ void send_mouse_report(report_digitizer_t* report) {
     }
 
     if (last_contacts == 0) {
-        button1_held = false;
         max_contacts = 0;
 
         if (contacts > 0) {
@@ -319,15 +347,9 @@ void send_mouse_report(report_digitizer_t* report) {
             contact_start_x = report->fingers[0].x;
             contact_start_y = report->fingers[0].y;
 
-            // If we tapped, then put our finger down straight away - activate the tap-hold gesture.
-            // TODO: Supress the previous tap? Sending it seems to break some functionaily (window resize)
-            // in MacOS Mojave.
-            if (tapped) {
-                const uint32_t duration = timer_elapsed32(tap_time);
-                if (duration < DIGITIZER_MOUSE_TAP_HOLD_TIME) {
-                    button1_held = true;
-                }
-                tapped = false;
+            if (gesture == POSSIBLE_TAP) {
+                gesture = HOLD;
+                tap_time = timer_read32();
             }
         }
     }
@@ -341,25 +363,29 @@ void send_mouse_report(report_digitizer_t* report) {
                 const uint32_t distance_x = abs(report->fingers[0].x - contact_start_x);
                 const uint32_t distance_y = abs(report->fingers[0].y - contact_start_y);
 
-                // If we tapped quickly, without moving far, send a tap
-                if (duration < DIGITIZER_MOUSE_TAP_TIME && distance_x < DIGITIZER_MOUSE_TAP_DISTANCE && distance_y < DIGITIZER_MOUSE_TAP_DISTANCE) {
-                    if (max_contacts == 2) {
-                        // Right click
-                        mouse_report.buttons |= 0x2;
+                if (gesture == HOLD) {
+                    const uint32_t duration = timer_elapsed32(tap_time);
+                    if (duration < DIGITIZER_MOUSE_TAP_HOLD_TIME) {
+                        // Actually a double tap...
+                        gesture = DOUBLE_TAP;
                     }
                     else {
+                        gesture = NO_GESTURE;
+                    }
+                }
+                else if (duration < DIGITIZER_MOUSE_TAP_TIME) {
+                    // If we tapped quickly, without moving far, send a tap
+                    if (max_contacts == 2) {
+                        // Right click
+			            gesture = RIGHT_CLICK;
+                        tap_time = timer_read32();
+                    }
+                    else if (distance_x < DIGITIZER_MOUSE_TAP_DISTANCE && distance_y < DIGITIZER_MOUSE_TAP_DISTANCE) {
                         // Left click
+                        gesture = POSSIBLE_TAP;
                         mouse_report.buttons |= 0x1;
                         tap_time = timer_read32();
-                        tapped = true;
                     }
-
-                    // If we got here, we are sending a click - we need to ignore the motion pin and process one more
-                    // event so that we can release the button press.
-                    process_one_more_event = true;
-                }
-                else {
-                    tapped = false;
                 }
                 break;
             case 1:
@@ -387,10 +413,10 @@ void send_mouse_report(report_digitizer_t* report) {
                 // Do nothing
         }
     }
-    if (report->button1 || button1_held) {
+    if (report->button1 || gesture == HOLD || gesture == POSSIBLE_TAP) {
         mouse_report.buttons |= 0x1;
     }
-    if (report->button2) {
+    if (report->button2 || gesture == RIGHT_CLICK) {
         mouse_report.buttons |= 0x2;
     } 
     if (report->button3) {
@@ -408,6 +434,8 @@ bool digitizer_task(void) {
 #if DIGITIZER_TASK_THROTTLE_MS
     static uint32_t last_exec = 0;
 
+    digitizer_send_mouse_reports = true;
+
     if (timer_elapsed32(last_exec) < DIGITIZER_TASK_THROTTLE_MS) {
         return false;
     }
@@ -415,10 +443,12 @@ bool digitizer_task(void) {
 #endif
     if (digitizer_driver.get_report) {
 #ifdef DIGITIZER_MOTION_PIN
+        const bool process_one_more_event = update_gesture_state();
         if (process_one_more_event || digitizer_motion_detected())
+#else
+	update_gesture_state();
 #endif
         {
-            process_one_more_event = false;
 #if defined(SPLIT_DIGITIZER_ENABLE)
 #    if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
             digitizer_t new_state = DIGITIZER_THIS_SIDE ? digitizer_driver.get_report(digitizer_state) : shared_digitizer_report;
