@@ -220,8 +220,8 @@ void digitizer_set_report(digitizer_t digitizer_report) {
 }
 
 void digitizer_init(void) {
-#if defined(SPLIT_POINTING_ENABLE)
-    if (!(POINTING_DEVICE_THIS_SIDE))
+#if defined(SPLIT_DIGITIZER_ENABLE)
+    if (!(DIGITIZER_THIS_SIDE))
         return;
 #endif
 #if DIGITIZER_FINGER_COUNT > 0
