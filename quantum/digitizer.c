@@ -434,8 +434,6 @@ bool digitizer_task(void) {
 #if DIGITIZER_TASK_THROTTLE_MS
     static uint32_t last_exec = 0;
 
-    digitizer_send_mouse_reports = true;
-
     if (timer_elapsed32(last_exec) < DIGITIZER_TASK_THROTTLE_MS) {
         return false;
     }
