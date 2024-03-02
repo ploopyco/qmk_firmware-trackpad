@@ -5,17 +5,11 @@
 #include "i2c_master.h"
 #include "maxtouch.h"
 
-#ifdef DIGITIZER_ENABLE
-#   include "digitizer.h"
-#   include "digitizer_driver.h"
-#endif
-#ifdef POINTING_DEVICE_ENABLE
-#   include "pointing_device.h"
-#endif
+#include "digitizer.h"
+#include "digitizer_driver.h"
 
 #define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
 #define CPI_TO_SAMPLES(cpi, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((cpi) * (dist_in_mm) * 10, 254))
-#define SAMPLES_TO_CPI(samples, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((samples) * 254, (dist_in_mm) * 10))
 #define SWAP_BYTES(a) ((a << 8) | (a >> 8))
 
 // By default we assume all available X and Y pins are in use, but a designer
@@ -49,8 +43,8 @@
 #   define MXT_TAP_AND_HOLD_DISTANCE 5
 #endif
 
-#ifndef MXT_DEFAULT_DPI
-    #define MXT_DEFAULT_DPI 600
+#ifndef MXT_CPI
+    #define MXT_CPI 600
 #endif
 
 #ifndef MXT_TOUCH_THRESHOLD
@@ -85,17 +79,7 @@ static uint16_t t100_second_report_id                               = 0;
 static uint16_t t100_subsequent_report_ids[DIGITIZER_FINGER_COUNT]  = {};
 static uint16_t t100_num_reports                                    = 0;
 
-// Current driver state state
-static uint16_t cpi                                                 = MXT_DEFAULT_DPI;
-
-// If true, we generate one more call to pointing_device_driver_get_report
-// after the motion pin goes high. This enables us to clear button state
-// in the case of a tap.
-#ifdef POINTING_DEVICE_ENABLE
-static bool extra_event                                             = false;
-#endif
-
-void pointing_device_driver_init(void) {
+void maxtouch_init(void) {
     mxt_information_block information = {0};
 
     i2c_init();
@@ -221,11 +205,11 @@ void pointing_device_driver_init(void) {
         cfg.movhysti                        = 6;    // Initial movement hysteresis
         cfg.movhystn                        = 4;    // Next movement hysteresis
 
-        //cfg.tchdiup                         = 1;    // Up touch detection integration - the number of cycles before the sensor decides an up event has occurred
-        //cfg.tchdidown                       = 1;    // Down touch detection integration - the number of cycles before the sensor decides an down event has occurred
+        cfg.tchdiup                         = 0;    // Up touch detection integration - the number of cycles before the sensor decides an up event has occurred
+        cfg.tchdidown                       = 0;    // Down touch detection integration - the number of cycles before the sensor decides an down event has occurred
 
-        cfg.xrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
-        cfg.yrange                          = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
+        cfg.xrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
+        cfg.yrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
     
         status                              = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
@@ -235,127 +219,7 @@ void pointing_device_driver_init(void) {
     }
 }
 
-#ifdef POINTING_DEVICE_ENABLE
-report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
-    // TODO: Refactor the gesture handling.
-    static bool button_held = false;
-    static int max_fingers = 0;
-    static pointing_device_buttons_t held_button = POINTING_DEVICE_BUTTON1;
-    bool seen_t100 = false;
-    static int fingers = 0;
-
-    if (t44_message_count_address) {
-        mxt_message_count message_count = {};
-        i2c_status_t status = i2c_readReg16(MXT336UD_ADDRESS, t44_message_count_address,
-            (uint8_t *)&message_count, sizeof(mxt_message_count), MXT_I2C_TIMEOUT_MS);
-        if (status == I2C_STATUS_SUCCESS) {
-            for (int i = 0; i < message_count.count; i++) {
-                mxt_message message = {};
-                status              = i2c_readReg16(MXT336UD_ADDRESS, t5_message_processor_address,
-                                        (uint8_t *)&message, sizeof(mxt_message), MXT_I2C_TIMEOUT_MS);
-
-                if (message.report_id == t100_first_report_id) {
-                    // Track the maximum number of fingers since the last DOWN event.
-                    fingers     = message.data[1];
-                    max_fingers = MAX(max_fingers, fingers);
-                }
-                else if (message.report_id == t100_subsequent_report_ids[0]) {
-                    int event                   = (message.data[0] & 0xf);
-                    bool down                   = (event == 0x4) || (event == 0x8) || (event == 0x9);
-                    static int last_x           = 0;
-                    static int last_y           = 0;
-                    static uint32_t down_timer  = 0;
-                    static int down_x           = 0;
-                    static int down_y           = 0;
-                    static int move             = false;
-                    uint32_t elapsed            = timer_elapsed32(down_timer);
-                    uint16_t x                  = message.data[1] | (message.data[2] << 8);
-                    uint16_t y                  = message.data[3] | (message.data[4] << 8);
-
-                    seen_t100                   = true;
-
-                    // If this isnt a finger down event, update either our move or scroll
-                    // position, depending on the number of fingers on the screen.
-                    if (!down) {
-                        if (fingers == 2) {
-                            // Scrolling is too fast, so divide the h/v values.
-                            static int carry_h  = 0;
-                            static int carry_v  = 0;
-
-                            int h               = last_x - x + carry_h;
-                            int v               = y - last_y + carry_v;
-
-                            carry_h             = h % MXT_SCROLL_DIVISOR;
-                            carry_v             = v % MXT_SCROLL_DIVISOR;
-                            
-                            mouse_report.h      = h/MXT_SCROLL_DIVISOR;
-                            mouse_report.v      = v/MXT_SCROLL_DIVISOR;
-                        } else {
-                            mouse_report.x      = x - last_x;
-                            mouse_report.y      = y - last_y;
-                        }
-                    }
-
-                    // If a finger is held in the same spot for 300ms, send a button down.
-                    if (!move && !button_held && (event == NO_EVENT || event == MOVE || event == UP)) {
-                        if (elapsed > MXT_TAP_AND_HOLD_TIME) {
-                            if ((abs(down_x - x) < MXT_TAP_AND_HOLD_DISTANCE) && (abs(down_y - y) < MXT_TAP_AND_HOLD_DISTANCE)) {
-                                held_button             = POINTING_DEVICE_BUTTON1 + max_fingers - 1;
-                                mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, true, held_button);
-                                button_held             = true;
-                            }
-                            else {
-                                move                    = true;
-                            }
-                        }
-                    }
-
-                    // Detect tap events by measuring the time between finger down and up, and the distance traveled.
-                    if (event == DOWN) {
-                        down_timer  = timer_read32();
-                        down_x      = x;
-                        down_y      = y;
-                        move        = false;
-                        button_held = false;
-                        max_fingers = fingers;
-                    } 
-                    else if (event == UP) {
-                        if (button_held) {
-                            mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, false, held_button);
-                            button_held             = false;
-                        }
-                        else if (elapsed < MXT_TAP_TIME) {
-                            held_button             = POINTING_DEVICE_BUTTON1 + max_fingers - 1;
-                            mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, true, held_button);
-                            button_held             = true;
-                            extra_event             = true; // So we can send the button up event.
-                        }
-                        move = false;
-                    }
-                    last_x = x;
-                    last_y = y;
-                } else if ((message.report_id > t100_subsequent_report_ids[0]) && (message.report_id < t100_subsequent_report_ids[0] + t100_num_reports)) {
-                    // This is a report for a finger we are not explicitly handling.
-                } else {
-                    uprintf("Unhandled ID: %d\n", message.report_id);
-                }
-            }
-        }
-    }
-
-    // Special case, if no messages were received this is probably an extra_event we requested after sending a
-    // button down for a tap. We need to send the button up now. 
-    if (!seen_t100 && button_held) {
-        mouse_report.buttons    = pointing_device_handle_buttons(mouse_report.buttons, false, held_button);
-        button_held             = false;
-    }
-
-    return mouse_report;
-}
-#endif
-
-#ifdef DIGITIZER_ENABLE
-digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
+digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
     if (t44_message_count_address) {
         mxt_message_count message_count = {};
 
@@ -399,37 +263,3 @@ digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
 
     return digitizer_report;
 }
-#endif
-
-uint16_t pointing_device_driver_get_cpi(void) {
-    return cpi;
-}
-
-void pointing_device_driver_set_cpi(uint16_t new_cpi) {
-    cpi = new_cpi;
-    if (t100_multiple_touch_touchscreen_address) {
-        // TODO, We could probably just write 2 bytes.
-        mxt_touch_multiscreen_t100 cfg  = {};
-        i2c_status_t status             = i2c_readReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address, 
-                                            (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
-        cfg.xrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_HEIGHT_MM);
-        cfg.yrange                      = CPI_TO_SAMPLES(cpi, MXT_SENSOR_WIDTH_MM);
-        status                          = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
-                                            (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
-        if (status != I2C_STATUS_SUCCESS) {
-            dprintf("T100 Configuration failed: %d\n", status);
-        }
-    }
-}
-
-#ifdef POINTING_DEVICE_MOTION_PIN
-// TODO: This is an extension to the standard pointing device feature. Essentially to detect a tap
-// we measure the time between a DOWN and UP event, and if it is short we send a button press. But
-// we also need to send a button up event, and if there is no motion, we dont get a chance to do it.
-// Perhaps there is a better way of handling this?
-bool pointing_device_driver_motion_detected(void) {
-    bool result = extra_event || !readPin(POINTING_DEVICE_MOTION_PIN);
-    extra_event = false;
-    return result;
-}
-#endif

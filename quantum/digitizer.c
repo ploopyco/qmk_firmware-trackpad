@@ -93,12 +93,12 @@ static i2c_status_t azoteq_iqs5xx_init_status = 1;
         .get_report = digitizer_driver_get_report
     };
 #elif defined(DIGITIZER_DRIVER_maxtouch)
-    extern void pointing_device_driver_init(void);
-    extern digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report);
+    extern void maxtouch_init(void);
+    extern digitizer_t maxtouch_get_report(digitizer_t digitizer_report);
 
     const digitizer_driver_t digitizer_driver = {
-        .init = pointing_device_driver_init,
-        .get_report = digitizer_driver_get_report
+        .init = maxtouch_init,
+        .get_report = maxtouch_get_report
     };
 #else
     const digitizer_driver_t digitizer_driver = {};
@@ -249,37 +249,6 @@ __attribute__((weak)) bool digitizer_motion_detected(void) {
 #    else
     return readPin(DIGITIZER_MOTION_PIN);
 #    endif
-}
-#endif
-
-#ifdef MOUSEKEY_ENABLE2
-digitizer_t process_mousekeys(report_digitizer_t report) {
-    const report_mouse_t mousekey_report = mousekey_get_report();
-    const bool button1 = !!(mousekey_report.buttons & 0x1);
-    const bool button2 = !!(mousekey_report.buttons & 0x2);
-    const bool button3 = !!(mousekey_report.buttons & 0x4);
-    bool button_state_changed = false;
-
-    if (digitizer_state.button1 != button1) {
-        digitizer_state.button1 = report.button1 = button1;
-        button_state_changed = true;
-    }
-    if (digitizer_state.button2 != button2) {
-        digitizer_state.button2 = report.button2 = button2;
-        button_state_changed = true;
-    }
-    if (digitizer_state.button3 != button3) {
-        digitizer_state.button3 = report.button3 = button3;
-        button_state_changed = true;
-    }
-
-    // Always send some sort of finger state along with the changed buttons
-    if (!updated_report && button_state_changed) {
-        memcpy(report.fingers, digitizer_state.fingers, sizeof(digitizer_finger_report_t) * DIGITIZER_FINGER_COUNT);
-        report.contact_count = last_contacts;
-    }
-
-    return digitizer_state;
 }
 #endif
 
