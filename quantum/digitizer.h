@@ -39,61 +39,34 @@ typedef struct {
 } digitizer_t;
 
 /**
- * \brief Send the digitizer report to the host if it is marked as dirty.
- */
-void digitizer_flush(void);
-
-/**
- * Legacy API. In the past digitizer was purely a software feature.
- * It provided an API to place the cursor at an absolute position.
- * Consider removing these functions.
- */
-#if DIGITIZER_HAS_STYLUS
-/**
- * \brief Assert the "in range" indicator, and flush the report.
- */
-void digitizer_in_range_on(void);
-
-/**
- * \brief Deassert the "in range" indicator, and flush the report.
- */
-void digitizer_in_range_off(void);
-
-/**
- * \brief Assert the tip switch, and flush the report.
- */
-void digitizer_tip_switch_on(void);
-
-/**
- * \brief Deassert the tip switch, and flush the report.
- */
-void digitizer_tip_switch_off(void);
-
-/**
- * \brief Assert the barrel switch, and flush the report.
- */
-void digitizer_barrel_switch_on(void);
-
-/**
- * \brief Deassert the barrel switch, and flush the report.
- */
-void digitizer_barrel_switch_off(void);
-
-/**
- * \brief Set the absolute X and Y position of the digitizer contact, and flush the report.
+ * \brief Gets the current digitizer state.
  *
- * \param x The X value of the contact position, from 0 to 1.
- * \param y The Y value of the contact position, from 0 to 1.
+ * \return The current digitizer state
  */
-void digitizer_set_position(float x, float y);
-#endif
-
 digitizer_t digitizer_get_report(void);
+
+/**
+ * \brief Sets the digitizer state, the new state will be sent when the digitizer task next runs.
+ */
 void digitizer_set_report(digitizer_t digitizer_report);
+
+/**
+ * \brief Initializes the digitizer feature.
+ */
 void digitizer_init(void);
+
+/**
+ * \brief Task processing routine for the digitizer feature. This function polls the digitizer hardware
+ * and sends events to the host as required.
+ * 
+ * \return true if a new event was sent
+ */
 bool digitizer_task(void);
 
 #if defined(SPLIT_DIGITIZER_ENABLE)
+/**
+ * \brief Updates the digitizer report from the slave half.
+ */
 void     digitizer_set_shared_report(digitizer_t report);
 #    if !defined(DIGITIZER_TASK_THROTTLE_MS)
 #        define DIGITIZER_TASK_THROTTLE_MS 1
