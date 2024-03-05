@@ -464,12 +464,13 @@ void keyboard_init(void) {
 #ifdef SPLIT_KEYBOARD
     split_post_init();
 #endif
+#ifdef DIGITIZER_ENABLE
+    // init before pointing device
+    digitizer_init();
+#endif
 #ifdef POINTING_DEVICE_ENABLE
     // init after split init
     pointing_device_init();
-#endif
-#ifdef DIGITIZER_ENABLE
-    digitizer_init();
 #endif
 #ifdef BLUETOOTH_ENABLE
     bluetooth_init();
@@ -687,16 +688,17 @@ void keyboard_task(void) {
     }
 #endif
 
-#ifdef POINTING_DEVICE_ENABLE
-    if (pointing_device_task()) {
-        last_pointing_device_activity_trigger();
+#ifdef DIGITIZER_ENABLE
+    // The digitizer may be a pointing device driver, so update its state before the pointing device
+    if (digitizer_task()) {
+        last_digitizer_activity_trigger();
         activity_has_occurred = true;
     }
 #endif
 
-#ifdef DIGITIZER_ENABLE
-    if (digitizer_task()) {
-        last_digitizer_activity_trigger();
+#ifdef POINTING_DEVICE_ENABLE
+    if (pointing_device_task()) {
+        last_pointing_device_activity_trigger();
         activity_has_occurred = true;
     }
 #endif
