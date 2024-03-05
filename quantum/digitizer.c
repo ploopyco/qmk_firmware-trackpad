@@ -29,11 +29,11 @@
 #endif
 
 #ifndef DIGITIZER_MOUSE_TAP_TIME
-#    define DIGITIZER_MOUSE_TAP_TIME 300
+#    define DIGITIZER_MOUSE_TAP_TIME 200
 #endif
 
 #ifndef DIGITIZER_MOUSE_TAP_HOLD_TIME
-#    define DIGITIZER_MOUSE_TAP_HOLD_TIME 200
+#    define DIGITIZER_MOUSE_TAP_HOLD_TIME 300
 #endif
 
 #ifndef DIGITIZER_MOUSE_TAP_DISTANCE
@@ -56,6 +56,7 @@ typedef struct {
 } digitizer_driver_t;
 
 bool digitizer_send_mouse_reports = true;
+static report_mouse_t mouse_report = {};
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
 #include "drivers/sensors/azoteq_iqs5xx.h"
@@ -198,16 +199,30 @@ static bool has_digitizer_report_changed(digitizer_t *new_report, digitizer_t *o
 /**
  * @brief Gets the current digitizer report used by the digitizer task
  *
- * @return report_mouse_t
+ * @return digitizer_t
  */
 digitizer_t digitizer_get_report(void) {
     return digitizer_state;
 }
 
 /**
+ * @brief Gets the current digitizer mouse report, the pointing device feature will send this is we
+ * nave fallen back to mouse mode.
+ *
+ * @return report_mouse_t
+ */
+report_mouse_t digitizer_get_mouse_report(report_mouse_t) {
+    report_mouse_t report = mouse_report;
+    // Retain the button state, but drop any motion.
+    memset(&mouse_report, 0, sizeof(report_mouse_t));
+    mouse_report.buttons = report.buttons;
+    return report;
+}
+
+/**
  * @brief Sets digitizer report used by the digitier task
  *
- * @param[in] mouse_report
+ * @param[in] digitizer_report
  */
 void digitizer_set_report(digitizer_t digitizer_report) {
     dirty |= has_digitizer_report_changed(&digitizer_state, &digitizer_report);
@@ -256,7 +271,6 @@ typedef enum {
     NO_GESTURE,
     POSSIBLE_TAP,
     HOLD,
-    DOUBLE_TAP,
     RIGHT_CLICK
 } gesture_state;
 
@@ -273,10 +287,6 @@ static bool update_gesture_state(void) {
                 return true;
             }
         }
-        if (gesture == DOUBLE_TAP) {
-            gesture = POSSIBLE_TAP;
-            return true;
-        }
         if (gesture == RIGHT_CLICK) {
             gesture = NO_GESTURE;
             return true;
@@ -286,7 +296,7 @@ static bool update_gesture_state(void) {
 }
 
 // We can fallback to reporting as a mouse for hosts which do not implement trackpad support
-static void send_mouse_report(report_digitizer_t* report) {
+static void update_mouse_report(report_digitizer_t* report) {
     static report_digitizer_t last_report = {};
 
     // Some state held to perform basic gesture detection
@@ -295,7 +305,7 @@ static void send_mouse_report(report_digitizer_t* report) {
     static int contact_start_y = 0;
     static uint8_t max_contacts = 0;
 
-    report_mouse_t mouse_report = {};
+    memset(&mouse_report, 0, sizeof(report_mouse_t));
     int contacts = 0;
     int last_contacts = 0;
 
@@ -315,11 +325,10 @@ static void send_mouse_report(report_digitizer_t* report) {
             contact_start_time = timer_read32();
             contact_start_x = report->fingers[0].x;
             contact_start_y = report->fingers[0].y;
+        }
 
-            if (gesture == POSSIBLE_TAP) {
-                gesture = HOLD;
-                tap_time = timer_read32();
-            }
+        if (gesture == POSSIBLE_TAP) {
+            gesture = HOLD;
         }
     }
     else
@@ -333,16 +342,10 @@ static void send_mouse_report(report_digitizer_t* report) {
                 const uint32_t distance_y = abs(report->fingers[0].y - contact_start_y);
 
                 if (gesture == HOLD) {
-                    const uint32_t duration = timer_elapsed32(tap_time);
-                    if (duration < DIGITIZER_MOUSE_TAP_HOLD_TIME) {
-                        // Actually a double tap...
-                        gesture = DOUBLE_TAP;
-                    }
-                    else {
-                        gesture = NO_GESTURE;
-                    }
+                    gesture = NO_GESTURE;
                 }
-                else if (duration < DIGITIZER_MOUSE_TAP_TIME) {
+
+                if (duration < DIGITIZER_MOUSE_TAP_TIME) {
                     // If we tapped quickly, without moving far, send a tap
                     if (max_contacts == 2) {
                         // Right click
@@ -382,7 +385,7 @@ static void send_mouse_report(report_digitizer_t* report) {
                 // Do nothing
         }
     }
-    if (report->button1 || gesture == HOLD || gesture == POSSIBLE_TAP) {
+    if (report->button1 || (max_contacts == 1 && (gesture == HOLD || gesture == POSSIBLE_TAP))) {
         mouse_report.buttons |= 0x1;
     }
     if (report->button2 || gesture == RIGHT_CLICK) {
@@ -392,7 +395,6 @@ static void send_mouse_report(report_digitizer_t* report) {
         mouse_report.buttons |= 0x4;
     }
 
-    host_mouse_send(&mouse_report);
     last_report = *report;
 }
 
@@ -464,7 +466,9 @@ bool digitizer_task(void) {
         }
     }
 
-#ifdef MOUSEKEY_ENABLE
+#if defined(MOUSEKEY_ENABLE) && !defined(POINTING_DEVICE_ENABLE)
+    // Pointing device has a more fully featured mousekeys implementation,
+    // so we prefer it if pointing device is enabled.
     const report_mouse_t mousekey_report = mousekey_get_report();
     const bool button1 = !!(mousekey_report.buttons & 0x1);
     const bool button2 = !!(mousekey_report.buttons & 0x2);
@@ -489,11 +493,16 @@ bool digitizer_task(void) {
         memcpy(report.fingers, digitizer_state.fingers, sizeof(digitizer_finger_report_t) * DIGITIZER_FINGER_COUNT);
         report.contact_count = last_contacts;
     }
+
+    updated_report |= button_state_changed;
 #endif
 
-    if (updated_report || button_state_changed) {
+    if (updated_report) {
         if (digitizer_send_mouse_reports) {
-            send_mouse_report(&report);
+            update_mouse_report(&report);
+#if !defined(POINTING_DEVICE_ENABLE)
+            host_mouse_send(&mouse_report);
+#endif
         }
         else {
             host_digitizer_send(&report);

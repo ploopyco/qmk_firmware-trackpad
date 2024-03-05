@@ -146,7 +146,9 @@ __attribute__((weak)) void pointing_device_init(void) {
     if ((POINTING_DEVICE_THIS_SIDE))
 #endif
     {
-        pointing_device_driver.init();
+        if (pointing_device_driver.init) {
+            pointing_device_driver.init();
+        }
 #ifdef POINTING_DEVICE_MOTION_PIN
 #    ifdef POINTING_DEVICE_MOTION_PIN_ACTIVE_LOW
         gpio_set_pin_input_high(POINTING_DEVICE_MOTION_PIN);
@@ -218,16 +220,6 @@ report_mouse_t pointing_device_adjust_by_defines(report_mouse_t mouse_report) {
     return mouse_report;
 }
 
-#ifdef POINTING_DEVICE_MOTION_PIN
-__attribute__((weak)) bool pointing_device_driver_motion_detected(void) {
-#    ifdef POINTING_DEVICE_MOTION_PIN_ACTIVE_LOW
-    return !readPin(POINTING_DEVICE_MOTION_PIN);
-#    else
-    return readPin(POINTING_DEVICE_MOTION_PIN);
-#    endif
-}
-#endif
-
 /**
  * @brief Retrieves and processes pointing device data.
  *
@@ -256,7 +248,11 @@ __attribute__((weak)) bool pointing_device_task(void) {
 #    if defined(SPLIT_POINTING_ENABLE)
 #        error POINTING_DEVICE_MOTION_PIN not supported when sharing the pointing device report between sides.
 #    endif
-    if (pointing_device_driver_motion_detected()) {
+#    ifdef POINTING_DEVICE_MOTION_PIN_ACTIVE_LOW
+    if (!readPin(POINTING_DEVICE_MOTION_PIN))
+#    else
+    if (readPin(POINTING_DEVICE_MOTION_PIN))
+#    endif
 #endif
 
 #if defined(SPLIT_POINTING_ENABLE)

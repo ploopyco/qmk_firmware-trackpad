@@ -20,7 +20,7 @@
         "nkro": false,
         "rgb_matrix": true,
         "digitizer": true,
-        "pointing_device": false
+        "pointing_device": true
     },
     "bootmagic": {
         "matrix": [ 0, 0 ]

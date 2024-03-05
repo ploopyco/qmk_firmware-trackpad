@@ -492,6 +492,18 @@ const pointing_device_driver_t pointing_device_driver = {
 };
 // clang-format on
 
+
+#elif defined(POINTING_DEVICE_DRIVER_digitizer)
+extern report_mouse_t digitizer_get_mouse_report(report_mouse_t mouse_report);
+
+// clang-format off
+const pointing_device_driver_t pointing_device_driver = {
+    .init       = NULL,
+    .get_report = digitizer_get_mouse_report,
+    .get_cpi    = NULL,
+    .set_cpi    = NULL
+};
+// clang-format on
 #else
 __attribute__((weak)) void           pointing_device_driver_init(void) {}
 __attribute__((weak)) report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
