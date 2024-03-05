@@ -130,59 +130,6 @@ void digitizer_set_shared_report(digitizer_t report) {
 }
 #endif     // defined(SPLIT_DIGITIZER_ENABLE)
 
-#if DIGITIZER_HAS_STYLUS
-void digitizer_flush(void) {
-    if (dirty) {
-        digitizer_report_t report = { .stylus = digitizer_state.stylus };
-        host_digitizer_send(&report);
-        dirty = false;
-    }
-}
-
-void digitizer_in_range_on(void) {
-    digitizer_state.stylus.in_range = true;
-    dirty    = true;
-    digitizer_flush();
-}
-
-void digitizer_in_range_off(void) {
-    digitizer_state.stylus.in_range = false;
-    dirty    = true;
-    digitizer_flush();
-}
-
-void digitizer_tip_switch_on(void) {
-    digitizer_state.stylus.tip   = true;
-    dirty = true;
-    digitizer_flush();
-}
-
-void digitizer_tip_switch_off(void) {
-    digitizer_state.stylus.tip   = false;
-    dirty = true;
-    digitizer_flush();
-}
-
-void digitizer_barrel_switch_on(void) {
-    digitizer_state.stylus.barrel = true;
-    dirty  = true;
-    digitizer_flush();
-}
-
-void digitizer_barrel_switch_off(void) {
-    digitizer_state.stylus.barrel = false;
-    dirty  = true;
-    digitizer_flush();
-}
-
-void digitizer_set_position(float x, float y) {
-    digitizer_state.stylus.x    = x;
-    digitizer_state.stylus.y    = y;
-    dirty       = true;
-    digitizer_flush();
-}
-#endif
-
 static bool has_digitizer_report_changed(digitizer_t *new_report, digitizer_t *old_report) {
     int cmp = 0;
     if (new_report != NULL && old_report != NULL) {
@@ -509,5 +456,5 @@ bool digitizer_task(void) {
         }
     }
 
-    return false;
+    return updated_report;
 }

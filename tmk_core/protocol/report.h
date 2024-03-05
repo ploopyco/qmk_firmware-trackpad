@@ -27,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #ifdef DIGITIZER_ENABLE
-// The report structure will depend on the hardware capabilities
 #    include "digitizer_driver.h"
 #endif
 
@@ -43,7 +42,7 @@ enum hid_report_ids {
     REPORT_ID_NKRO,
     REPORT_ID_JOYSTICK,
     REPORT_ID_DIGITIZER,
-    REPORT_ID_DIGITIZER_CONFIGURATION = 11,
+    REPORT_ID_DIGITIZER_CONFIGURATION,
     REPORT_ID_DIGITIZER_GET_FEATURE,
     REPORT_ID_DIGITIZER_FUNCTION_SWITCH,
     REPORT_ID_DIGITIZER_CERTIFICATE,
@@ -371,6 +370,3 @@ bool has_mouse_report_changed(report_mouse_t* new_report, report_mouse_t* old_re
 #ifdef __cplusplus
 }
 #endif
-
-bool get_usb_feature_report(uint8_t *const ReportID, const uint8_t ReportType, void *ReportData, uint16_t *const ReportSize);
-
