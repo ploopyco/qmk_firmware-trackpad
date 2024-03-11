@@ -12,7 +12,7 @@
 typedef struct {
     time_msecs_t idle_rate;
     systime_t    last_report;
-    uint8_t      data[64];
+    uint8_t      *data;
     size_t       length;
 } usb_fs_report_t;
 
@@ -26,7 +26,7 @@ typedef struct {
     const bool (*idle_timer_elasped)(usb_fs_report_t **, uint8_t);
 } usb_report_storage_t;
 
-#define QMK_USB_REPORT_STROAGE_ENTRY(_report_id, _report_size) [_report_id] = &((usb_fs_report_t){.data = {[0] = _report_id}, .length = _report_size})
+#define QMK_USB_REPORT_STROAGE_ENTRY(_report_id, _buffer) [_report_id] = &((usb_fs_report_t){.data = (uint8_t*) &_buffer, .length = sizeof(_buffer)})
 
 #define QMK_USB_REPORT_STORAGE(_get_report, _set_report, _reset_report, _get_idle, _set_idle, _idle_timer_elasped, _report_count, _reports...) \
     &((usb_report_storage_t){                                                                                                                  \
@@ -39,7 +39,7 @@ typedef struct {
         .idle_timer_elasped = _idle_timer_elasped,                                                                                             \
     })
 
-#define QMK_USB_REPORT_STORAGE_DEFAULT(_report_length)                        \
+#define QMK_USB_REPORT_STORAGE_DEFAULT(_buffer)                        \
     QMK_USB_REPORT_STORAGE(&usb_get_report,         /* _get_report */         \
                            &usb_set_report,         /* _set_report */         \
                            &usb_reset_report,       /* _reset_report */       \
@@ -47,7 +47,7 @@ typedef struct {
                            &usb_set_idle_rate,      /* _set_idle */           \
                            &usb_idle_timer_elapsed, /* _idle_timer_elasped */ \
                            1,                       /* _report_count */       \
-                           QMK_USB_REPORT_STROAGE_ENTRY(0, _report_length))
+                           QMK_USB_REPORT_STROAGE_ENTRY(0, _buffer))
 
 // USB HID SET_REPORT and GET_REPORT  handling functions
 void usb_set_report(usb_fs_report_t **reports, const uint8_t *data, size_t length);
@@ -55,6 +55,7 @@ void usb_shared_set_report(usb_fs_report_t **reports, const uint8_t *data, size_
 
 void usb_get_report(usb_fs_report_t **reports, uint8_t report_id, usb_fs_report_t *report);
 void usb_shared_get_report(usb_fs_report_t **reports, uint8_t report_id, usb_fs_report_t *report);
+void usb_digitizer_get_report(usb_fs_report_t **reports, uint8_t report_id, usb_fs_report_t *report);
 
 void usb_reset_report(usb_fs_report_t **reports);
 void usb_shared_reset_report(usb_fs_report_t **reports);
