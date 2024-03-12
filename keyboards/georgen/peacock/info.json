@@ -22,28 +22,11 @@
         "digitizer": true,
         "pointing_device": true
     },
-    "bootmagic": {
-        "matrix": [ 0, 0 ]
-    },
-    "matrix_pins": {
-        "direct": [["GP22", "GP23", "GP24", "GP27", "GP26"]]
-    },
     "url": "https://github.com/george-norton/peacock",
     "usb": {
         "device_version": "1.0.0",
         "pid": "0x0000",
         "vid": "0xFEED"
-    },
-    "layouts": {
-        "LAYOUT": {
-            "layout": [
-                {"matrix": [0, 0], "label":"Switch 1", "x": 0, "y": 0},
-                {"matrix": [0, 1], "label":"Switch 2", "x": 1, "y": 0},
-                {"matrix": [0, 2], "label":"Switch 3", "x": 2, "y": 0},
-                {"matrix": [0, 3], "label":"Switch 4", "x": 3, "y": 0},
-                {"matrix": [0, 4], "label":"Switch 5", "x": 4, "y": 0}
-            ]
-        }
     },
     "ws2812": {
         "pin": "GP25",
@@ -98,14 +81,6 @@
             "multisplash": true,
             "solid_splash": true,
             "solid_multisplash": true
-        },
-        "layout": [
-            { "x": 0, "y": 0, "flags": 4 },
-            { "x": 1, "y": 0, "flags": 4 },
-            { "x": 2, "y": 0, "flags": 4 },
-            { "x": 3, "y": 0, "flags": 4 },
-            { "x": 4, "y": 0, "flags": 4 },
-            { "x": -1, "y": -1, "flags": 0 }
-        ]
+        }
     }
 }

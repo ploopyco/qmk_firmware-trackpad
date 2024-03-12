@@ -3,10 +3,18 @@
 
 #include QMK_KEYBOARD_H
 
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_BTN1, KC_BTN2, LT(1, KC_BTN3), KC_ENTER, KC_BACKSPACE),
+#ifdef PEACOCK_ENCODER_BODGE
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_BTN1, KC_BTN2, LT(1, KC_BTN3), KC_LGUI, KC_ENTER),
                                                               [1] = LAYOUT(QK_BOOT, RGB_MOD, KC_TRNS, RGB_RMOD, EE_CLR),
                                                               [2] = LAYOUT(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
                                                               [3] = LAYOUT(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS)};
+#else
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_MUTE, KC_BTN1, KC_BTN2, LT(1, KC_BTN3), KC_LGUI, KC_ENTER, C(KC_C)),
+                                                              [1] = LAYOUT(KC_TRNS, QK_BOOT, RGB_MOD, KC_TRNS, RGB_RMOD, EE_CLR, KC_TRNS),
+                                                              [2] = LAYOUT(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+                                                              [3] = LAYOUT(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS)};
+#endif
+
 const uint8_t INDICATOR_LED = 5;
 
 #if defined(ENCODER_MAP_ENABLE)

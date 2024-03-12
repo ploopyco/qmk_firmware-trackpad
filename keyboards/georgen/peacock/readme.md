@@ -10,7 +10,8 @@ Peacock is a QMK powered standalone 7" trackpad. The board features a macropad w
 
 Make example for this keyboard (after setting up your build environment):
 
-    make georgen/peacock:default
+    make georgen/peacock/v1_01:default
+    qmk compile -kb georgen/peacock/v1_01 -km default
 
 Flashing example for this keyboard:
 
