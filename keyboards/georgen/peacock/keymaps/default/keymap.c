@@ -25,14 +25,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_MU
 #endif
 
 const uint8_t INDICATOR_LED = 5;
-static bool lmb_held = false;
 
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0] = { ENCODER_CCW_CW(KC_LEFT, KC_RIGHT),  ENCODER_CCW_CW(KC_UP, KC_DOWN)  },
+    [0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU),  ENCODER_CCW_CW(KC_UP, KC_DOWN)  },
     [1] = { ENCODER_CCW_CW(RGB_HUD, RGB_HUI),   ENCODER_CCW_CW(RGB_SAD, RGB_SAI)  },
     [2] = { ENCODER_CCW_CW(KC_MS_LEFT, KC_MS_RIGHT),   ENCODER_CCW_CW(KC_MS_UP, KC_MS_DOWN)  },
-    [3] = { ENCODER_CCW_CW(RGB_RMOD, RGB_MOD),  ENCODER_CCW_CW(KC_RIGHT, KC_LEFT) },
+    [3] = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS),  ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
 };
 #endif
 
@@ -40,21 +39,24 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     switch(get_highest_layer(layer_state|default_layer_state)) {
         case 3:
             rgb_matrix_set_color(INDICATOR_LED, RGB_BLUE);
-            lmb_held = false;
             break;
         case 2:
             rgb_matrix_set_color(INDICATOR_LED, RGB_RED);
             break;
         case 1:
             rgb_matrix_set_color(INDICATOR_LED, RGB_GREEN);
-            lmb_held = false;
             break;
         default:
             rgb_matrix_set_color(INDICATOR_LED, RGB_OFF);
-            lmb_held = false;
             break;
     }
     return false;
+}
+
+layer_state_t layer_state_set_user(layer_state_t state) {
+    // If we are etch-a-sketching. Ensure the mouse button is released.
+    mousekey_clear();
+    return state;
 }
 
 bool shutdown_kb(bool jump_to_bootloader) {
@@ -75,6 +77,8 @@ bool shutdown_kb(bool jump_to_bootloader) {
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     switch (keycode) {
         case LMB_TOGGLE:
+        {
+            static bool lmb_held = false;
             if (record->event.pressed) {
                 lmb_held = !lmb_held;
             }
@@ -85,6 +89,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 mousekey_off(KC_MS_BTN1);
             }
             break;
+        }
     }
     return true;
 }

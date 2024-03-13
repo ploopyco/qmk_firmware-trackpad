@@ -282,7 +282,7 @@ static void update_mouse_report(report_digitizer_t* report) {
     {
         max_contacts = MAX(contacts, max_contacts);
         switch (contacts) {
-            case 0:
+            case 0: {
                 // Treat short contacts with little travel as a tap
                 const uint32_t duration = timer_elapsed32(contact_start_time);
                 const uint32_t distance_x = abs(report->fingers[0].x - contact_start_x);
@@ -307,6 +307,7 @@ static void update_mouse_report(report_digitizer_t* report) {
                     }
                 }
                 break;
+            }
             case 1:
                 if (report->fingers[0].tip && last_report.fingers[0].tip) {
                     mouse_report.x = report->fingers[0].x - last_report.fingers[0].x;
