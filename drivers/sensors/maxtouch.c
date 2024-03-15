@@ -47,12 +47,31 @@
     #define MXT_CPI 600
 #endif
 
-#ifndef MXT_TOUCH_THRESHOLD
-    #define MXT_TOUCH_THRESHOLD 18
+#ifndef MXT_SURFACE_TYPE
+    #define MXT_SURFACE_TYPE VINYL
 #endif
 
-#ifndef MXT_GAIN
-    #define MXT_GAIN 4
+#define VINYL 1
+#define ACRYLIC 2
+
+#if MXT_SURFACE_TYPE==VINYL
+    #ifndef MXT_TOUCH_THRESHOLD
+        #define MXT_TOUCH_THRESHOLD 18
+    #endif
+
+    #ifndef MXT_GAIN
+        #define MXT_GAIN 4
+    #endif
+#elif MXT_SURFACE_TYPE==ACRYLIC
+    #ifndef MXT_TOUCH_THRESHOLD
+        #define MXT_TOUCH_THRESHOLD 12
+    #endif
+
+    #ifndef MXT_GAIN
+        #define MXT_GAIN 5
+    #endif
+#else
+    #error "Unknown surface type."
 #endif
 
 #ifndef MXT_DX_GAIN
@@ -196,8 +215,8 @@ void maxtouch_init(void) {
         cfg.gain                            = MXT_GAIN; // Single transmit gain for mutual capacitance measurements
         cfg.dxgain                          = MXT_DX_GAIN;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
         cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
-        cfg.mrgthr                          = 5;    // Merge threshold
-        cfg.mrghyst                         = 5;    // Merge threshold hysteresis
+        cfg.mrgthr                          = 2;    // Merge threshold
+        cfg.mrghyst                         = 2;    // Merge threshold hysteresis
         cfg.movsmooth                       = 224;  // The amount of smoothing applied to movements, this tails off at higher speeds
         cfg.movfilter                       = 4 & 0xF;  // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
 
@@ -205,8 +224,8 @@ void maxtouch_init(void) {
         cfg.movhysti                        = 6;    // Initial movement hysteresis
         cfg.movhystn                        = 4;    // Next movement hysteresis
 
-        cfg.tchdiup                         = 0;    // Up touch detection integration - the number of cycles before the sensor decides an up event has occurred
-        cfg.tchdidown                       = 0;    // Down touch detection integration - the number of cycles before the sensor decides an down event has occurred
+        cfg.tchdiup                         = 1;    // Up touch detection integration - the number of cycles before the sensor decides an up event has occurred
+        cfg.tchdidown                       = 1;    // Down touch detection integration - the number of cycles before the sensor decides an down event has occurred
 
         cfg.xrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
         cfg.yrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
