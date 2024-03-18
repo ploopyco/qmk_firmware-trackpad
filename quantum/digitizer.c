@@ -158,7 +158,7 @@ digitizer_t digitizer_get_report(void) {
  *
  * @return report_mouse_t
  */
-report_mouse_t digitizer_get_mouse_report(report_mouse_t mouse_report) {
+report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report) {
     report_mouse_t report = mouse_report;
     // Retain the button state, but drop any motion.
     memset(&mouse_report, 0, sizeof(report_mouse_t));
