@@ -158,7 +158,7 @@ digitizer_t digitizer_get_report(void) {
  *
  * @return report_mouse_t
  */
-report_mouse_t digitizer_get_mouse_report(report_mouse_t) {
+report_mouse_t digitizer_get_mouse_report(report_mouse_t mouse_report) {
     report_mouse_t report = mouse_report;
     // Retain the button state, but drop any motion.
     memset(&mouse_report, 0, sizeof(report_mouse_t));
@@ -205,7 +205,7 @@ void digitizer_init(void) {
 }
 
 #ifdef DIGITIZER_MOTION_PIN
-__attribute__((weak)) bool digitizer_motion_detected(void) { 
+__attribute__((weak)) bool digitizer_motion_detected(void) {
 #    ifdef DIGITIZER_MOTION_PIN_ACTIVE_LOW
     return !readPin(DIGITIZER_MOTION_PIN);
 #    else
@@ -324,12 +324,13 @@ static void update_mouse_report(report_digitizer_t* report) {
 
                     carry_h             = h % DIGITIZER_SCROLL_DIVISOR;
                     carry_v             = v % DIGITIZER_SCROLL_DIVISOR;
-                    
+
                     mouse_report.h      = h / DIGITIZER_SCROLL_DIVISOR;
                     mouse_report.v      = v / DIGITIZER_SCROLL_DIVISOR;
                 }
                 break;
             default:
+                break;
                 // Do nothing
         }
     }
@@ -338,7 +339,7 @@ static void update_mouse_report(report_digitizer_t* report) {
     }
     if (report->button2 || gesture == RIGHT_CLICK) {
         mouse_report.buttons |= 0x2;
-    } 
+    }
     if (report->button3) {
         mouse_report.buttons |= 0x4;
     }
