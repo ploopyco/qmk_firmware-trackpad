@@ -210,7 +210,7 @@ void maxtouch_init(void) {
         cfg.numtch                          = DIGITIZER_FINGER_COUNT;   // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
         cfg.ysize                           = MXT_MATRIX_Y_SIZE;    // Make configurable as this depends on the sensor design.
-        cfg.xpitch                          = (MXT_SENSOR_WIDTH_MM * 10 / MXT_MATRIX_X_SIZE);     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
+        cfg.xpitch                          = (MXT_SENSOR_WIDTH_MM * 10 / MXT_MATRIX_X_SIZE) - 50;     // Pitch between X-Lines (5mm + 0.1mm * XPitch).
         cfg.ypitch                          = (MXT_SENSOR_HEIGHT_MM * 10 / MXT_MATRIX_Y_SIZE) - 50;    // Pitch between Y-Lines (5mm + 0.1mm * YPitch).
         cfg.gain                            = MXT_GAIN; // Single transmit gain for mutual capacitance measurements
         cfg.dxgain                          = MXT_DX_GAIN;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
