@@ -47,6 +47,11 @@
     #define MXT_CPI 600
 #endif
 
+#ifndef MXT_RECALIBRATE_AFTER
+    // Steps of 200ms, 25 = 5 seconds
+    #define MXT_RECALIBRATE_AFTER 25
+#endif
+
 #ifndef MXT_SURFACE_TYPE
     #define MXT_SURFACE_TYPE VINYL
 #endif
@@ -185,6 +190,14 @@ void maxtouch_init(void) {
     // Configure capacitive acquision, currently we use all the default values but it feels like some of this stuff might be important.
     if (t8_acquisitionconfig_address) {
         mxt_gen_acquisitionconfig_t8 t8 = {};
+        t8.tchautocal = MXT_RECALIBRATE_AFTER;
+        t8.atchcalst = MXT_RECALIBRATE_AFTER;
+
+        // Antitouch detection - reject palms etc..
+        t8.atchcalsthr = 20;
+        t8.atchfrccalthr = 50;
+        t8.atchfrccalratio = 25;
+
         i2c_writeReg16(MXT336UD_ADDRESS, t8_acquisitionconfig_address, (uint8_t *)&t8, sizeof(mxt_gen_acquisitionconfig_t8), MXT_I2C_TIMEOUT_MS);
     }
 

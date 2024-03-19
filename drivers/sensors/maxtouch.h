@@ -95,8 +95,8 @@ typedef struct PACKED {
     unsigned char driftst;
     unsigned char tchautocal;
     unsigned char sync;
-    unsigned char acthcalst;
-    unsigned char acthcalsthr;
+    unsigned char atchcalst;
+    unsigned char atchcalsthr;
     unsigned char atchfrccalthr;
     unsigned char atchfrccalratio;
     unsigned char measallow;
