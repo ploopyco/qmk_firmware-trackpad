@@ -214,11 +214,17 @@ void maxtouch_init(void) {
                                                 (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
         // TODO: Generic handling of rotation/inversion for absolute mode?
-#ifdef DIGITIZER_INVERT_X
-        cfg.cfg1                            = T100_CFG_SWITCHXY | T100_CFG_INVERTY; // Could also handle rotation, and axis inversion in hardware here
-#else
-        cfg.cfg1                            = T100_CFG_SWITCHXY; // Could also handle rotation, and axis inversion in hardware here
+        uint8_t rotation                    = 0;
+#ifdef MXT_INVERT_X
+        rotation                            |= T100_CFG_INVERTX;
 #endif
+#ifdef MXT_INVERT_Y
+        rotation                            |= T100_CFG_INVERTY;
+#endif
+#ifdef MXT_SWITCH_XY
+        rotation                            |= T100_CFG_SWITCHXY;
+#endif
+        cfg.cfg1                            = rotation;
         cfg.scraux                          = 0x1;  // AUX data: Report the number of touch events
         cfg.numtch                          = DIGITIZER_FINGER_COUNT;   // The number of touch reports we want to receive (upto 10)
         cfg.xsize                           = MXT_MATRIX_X_SIZE;    // Make configurable as this depends on the sensor design.
