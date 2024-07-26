@@ -13,64 +13,508 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <stdlib.h>
 #include "digitizer.h"
+#include "debug.h"
+#include "host.h"
+#include "timer.h"
+#include "gpio.h"
+#include "keyboard.h"
+#ifdef MOUSEKEY_ENABLE
+#    include "mousekey.h"
+#endif
 
-digitizer_t digitizer_state = {
-    .in_range = false,
-    .tip      = false,
-    .barrel   = false,
-    .x        = 0,
-    .y        = 0,
-    .dirty    = false,
-};
+#ifdef DIGITIZER_MOTION_PIN
+#    undef DIGITIZER_TASK_THROTTLE_MS
+#endif
 
-void digitizer_flush(void) {
-    if (digitizer_state.dirty) {
-        host_digitizer_send(&digitizer_state);
-        digitizer_state.dirty = false;
+#ifndef DIGITIZER_MOUSE_TAP_TIME
+#    define DIGITIZER_MOUSE_TAP_TIME 200
+#endif
+
+#ifndef DIGITIZER_MOUSE_TAP_HOLD_TIME
+#    define DIGITIZER_MOUSE_TAP_HOLD_TIME 300
+#endif
+
+#ifndef DIGITIZER_MOUSE_TAP_DISTANCE
+#    define DIGITIZER_MOUSE_TAP_DISTANCE 15
+#endif
+
+#ifndef DIGITIZER_SCROLL_DIVISOR
+#    define DIGITIZER_SCROLL_DIVISOR 4
+#endif
+
+#if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
+#    ifndef SPLIT_DIGITIZER_ENABLE
+#        error "Using DIGITIZER_LEFT or DIGITIZER_RIGHT, then SPLIT_DIGITIZER_ENABLE is required but has not been defined"
+#    endif
+#endif
+
+typedef struct {
+    void (*init)(void);
+    digitizer_t (*get_report)(digitizer_t digitizer_report);
+} digitizer_driver_t;
+
+bool digitizer_send_mouse_reports = true;
+static report_mouse_t mouse_report = {};
+
+#if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
+#include "drivers/sensors/azoteq_iqs5xx.h"
+#include "wait.h"
+
+static i2c_status_t azoteq_iqs5xx_init_status = 1;
+    void azoteq_iqs5xx_init(void) {
+        i2c_init();
+        azoteq_iqs5xx_wake();
+        azoteq_iqs5xx_reset_suspend(true, false, true);
+        wait_ms(100);
+        azoteq_iqs5xx_wake();
+        if (azoteq_iqs5xx_get_product() != AZOTEQ_IQS5XX_UNKNOWN) {
+            azoteq_iqs5xx_setup_resolution();
+            azoteq_iqs5xx_init_status = azoteq_iqs5xx_set_report_rate(AZOTEQ_IQS5XX_REPORT_RATE, AZOTEQ_IQS5XX_ACTIVE, false);
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_event_mode(false, false);
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_reati(true, false);
+    #    if defined(AZOTEQ_IQS5XX_ROTATION_90)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(false, true, true, true, false);
+    #    elif defined(AZOTEQ_IQS5XX_ROTATION_180)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(true, true, false, true, false);
+    #    elif defined(AZOTEQ_IQS5XX_ROTATION_270)
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(true, false, true, true, false);
+    #    else
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_xy_config(false, false, false, true, false);
+    #    endif
+            azoteq_iqs5xx_init_status |= azoteq_iqs5xx_set_gesture_config(true);
+            wait_ms(AZOTEQ_IQS5XX_REPORT_RATE + 1);
+        }
+    };
+    extern digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report);
+
+    const digitizer_driver_t digitizer_driver = {
+        .init = azoteq_iqs5xx_init,
+        .get_report = digitizer_driver_get_report
+    };
+#elif defined(DIGITIZER_DRIVER_maxtouch)
+    extern void maxtouch_init(void);
+    extern digitizer_t maxtouch_get_report(digitizer_t digitizer_report);
+
+    const digitizer_driver_t digitizer_driver = {
+        .init = maxtouch_init,
+        .get_report = maxtouch_get_report
+    };
+#else
+    const digitizer_driver_t digitizer_driver = {};
+#endif
+
+static digitizer_t digitizer_state = {};
+static bool dirty = false;
+
+#if defined(SPLIT_DIGITIZER_ENABLE)
+
+#    if defined(DIGITIZER_LEFT)
+#        define DIGITIZER_THIS_SIDE is_keyboard_left()
+#    elif defined(DIGITIZER_RIGHT)
+#        define DIGITIZER_THIS_SIDE !is_keyboard_left()
+#    endif
+
+digitizer_t shared_digitizer_report = {};
+
+/**
+ * @brief Sets the shared digitizer report used by digitizer device task
+ *
+ * NOTE : Only available when using SPLIT_DIGITIZER_ENABLE
+ *
+ * @param[in] report digitizer_t
+ */
+void digitizer_set_shared_report(digitizer_t report) {
+    shared_digitizer_report = report;
+}
+#endif     // defined(SPLIT_DIGITIZER_ENABLE)
+
+static bool has_digitizer_state_changed(digitizer_t *new_state, digitizer_t *old_state) {
+    const int cmp = memcmp(new_state, old_state, sizeof(digitizer_t));
+    return cmp != 0;
+}
+
+/**
+ * @brief Gets the current digitizer state used by the digitizer task
+ *
+ * @return digitizer_t
+ */
+digitizer_t digitizer_get_state(void) {
+    return digitizer_state;
+}
+
+/**
+ * @brief Gets the current digitizer mouse report, the pointing device feature will send this is we
+ * nave fallen back to mouse mode.
+ *
+ * @return report_mouse_t
+ */
+report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report) {
+    report_mouse_t report = mouse_report;
+    // Retain the button state, but drop any motion.
+    memset(&mouse_report, 0, sizeof(report_mouse_t));
+    mouse_report.buttons = report.buttons;
+    return report;
+}
+
+/**
+ * @brief Sets digitizer state used by the digitier task
+ *
+ * @param[in] new_digitizer_state
+ */
+void digitizer_set_state(digitizer_t new_digitizer_state) {
+    dirty |= has_digitizer_state_changed(&digitizer_state, &new_digitizer_state);
+    if (dirty)
+        memcpy(&digitizer_state, &new_digitizer_state, sizeof(digitizer_t));
+}
+
+/**
+ * @brief Keyboard level code pointing device initialisation
+ *
+ */
+__attribute__((weak)) void digitizer_init_kb(void) {}
+
+/**
+ * @brief User level code pointing device initialisation
+ *
+ */
+__attribute__((weak)) void digitizer_init_user(void) {}
+
+/**
+ * @brief Weak function allowing for user level digitizer state modification
+ *
+ * Takes digitizer_t struct allowing modification at user level then returns digitizer_t.
+ *
+ * @param[in] digitizer_state digitizer_t
+ * @return digitizer_t
+ */
+__attribute__((weak)) digitizer_t digitizer_task_user(digitizer_t digitizer_state) {
+    return digitizer_state;
+}
+
+/**
+ * @brief Weak function allowing for keyboard level digitizer state modification
+ *
+ * Takes digitizer_t struct allowing modification at keyboard level then returns digitizer_t.
+ *
+ * @param[in] digitizer_state digitizer_t
+ * @return digitizer_t
+ */
+__attribute__((weak)) digitizer_t digitizer_task_kb(digitizer_t digitizer_state) {
+    return digitizer_task_user(digitizer_state);
+}
+
+
+void digitizer_init(void) {
+    uprintf("digitizer_init\n");
+
+#if defined(SPLIT_DIGITIZER_ENABLE)
+    if (!(DIGITIZER_THIS_SIDE))
+        return;
+#endif
+    if (digitizer_driver.init) {
+        digitizer_driver.init();
     }
+#ifdef DIGITIZER_MOTION_PIN
+#    ifdef DIGITIZER_MOTION_PIN_ACTIVE_LOW
+        setPinInputHigh(DIGITIZER_MOTION_PIN);
+#    else
+        setPinInput(DIGITIZER_MOTION_PIN);
+#    endif
+#endif
+
+    digitizer_init_kb();
+    digitizer_init_user();
 }
 
-void digitizer_in_range_on(void) {
-    digitizer_state.in_range = true;
-    digitizer_state.dirty    = true;
-    digitizer_flush();
+#ifdef DIGITIZER_MOTION_PIN
+__attribute__((weak)) bool digitizer_motion_detected(void) {
+#    ifdef DIGITIZER_MOTION_PIN_ACTIVE_LOW
+    return !readPin(DIGITIZER_MOTION_PIN);
+#    else
+    return readPin(DIGITIZER_MOTION_PIN);
+#    endif
+}
+#endif
+
+typedef enum {
+    NO_GESTURE,
+    POSSIBLE_TAP,
+    HOLD,
+    RIGHT_CLICK
+} gesture_state;
+
+
+static gesture_state gesture = NO_GESTURE;
+static int tap_time = 0;
+
+static bool update_gesture_state(void) {
+    if (digitizer_send_mouse_reports) {
+        if (gesture == POSSIBLE_TAP) {
+            const uint32_t duration = timer_elapsed32(tap_time);
+            if (duration >= DIGITIZER_MOUSE_TAP_HOLD_TIME) {
+                gesture = NO_GESTURE;
+                return true;
+            }
+        }
+        if (gesture == RIGHT_CLICK) {
+            gesture = NO_GESTURE;
+            return true;
+        }
+    }
+    return false;
 }
 
-void digitizer_in_range_off(void) {
-    digitizer_state.in_range = false;
-    digitizer_state.dirty    = true;
-    digitizer_flush();
+// We can fallback to reporting as a mouse for hosts which do not implement trackpad support
+static void update_mouse_report(report_digitizer_t* report) {
+    static report_digitizer_t last_report = {};
+
+    // Some state held to perform basic gesture detection
+    static int contact_start_time = 0;
+    static int contact_start_x = 0;
+    static int contact_start_y = 0;
+    static uint8_t max_contacts = 0;
+
+    memset(&mouse_report, 0, sizeof(report_mouse_t));
+    int contacts = 0;
+    int last_contacts = 0;
+
+    for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
+        if (report->fingers[i].tip) {
+            contacts ++;
+        }
+        if (last_report.fingers[i].tip) {
+            last_contacts ++;
+        }
+    }
+
+    if (last_contacts == 0) {
+        max_contacts = 0;
+
+        if (contacts > 0) {
+            contact_start_time = timer_read32();
+            contact_start_x = report->fingers[0].x;
+            contact_start_y = report->fingers[0].y;
+        }
+
+        if (gesture == POSSIBLE_TAP) {
+            gesture = HOLD;
+        }
+    }
+    else
+    {
+        max_contacts = MAX(contacts, max_contacts);
+        switch (contacts) {
+            case 0: {
+                // Treat short contacts with little travel as a tap
+                const uint32_t duration = timer_elapsed32(contact_start_time);
+                const uint32_t distance_x = abs(report->fingers[0].x - contact_start_x);
+                const uint32_t distance_y = abs(report->fingers[0].y - contact_start_y);
+
+                if (gesture == HOLD) {
+                    gesture = NO_GESTURE;
+                }
+
+                if (duration < DIGITIZER_MOUSE_TAP_TIME) {
+                    // If we tapped quickly, without moving far, send a tap
+                    if (max_contacts == 2) {
+                        // Right click
+			            gesture = RIGHT_CLICK;
+                        tap_time = timer_read32();
+                    }
+                    else if (distance_x < DIGITIZER_MOUSE_TAP_DISTANCE && distance_y < DIGITIZER_MOUSE_TAP_DISTANCE) {
+                        // Left click
+                        gesture = POSSIBLE_TAP;
+                        mouse_report.buttons |= 0x1;
+                        tap_time = timer_read32();
+                    }
+                }
+                break;
+            }
+            case 1:
+                if (report->fingers[0].tip && last_report.fingers[0].tip) {
+                    mouse_report.x = report->fingers[0].x - last_report.fingers[0].x;
+                    mouse_report.y = report->fingers[0].y - last_report.fingers[0].y;
+                }
+                break;
+            case 2:
+                // Scrolling is too fast, so divide the h/v values.
+                if (report->fingers[0].tip && last_report.fingers[0].tip) {
+                    static int carry_h  = 0;
+                    static int carry_v  = 0;
+                    const int h         = report->fingers[0].x - last_report.fingers[0].x + carry_h;
+                    const int v         = report->fingers[0].y - last_report.fingers[0].y + carry_v;
+
+                    carry_h             = h % DIGITIZER_SCROLL_DIVISOR;
+                    carry_v             = v % DIGITIZER_SCROLL_DIVISOR;
+
+                    mouse_report.h      = h / DIGITIZER_SCROLL_DIVISOR;
+                    mouse_report.v      = v / DIGITIZER_SCROLL_DIVISOR;
+                }
+                break;
+            default:
+                break;
+                // Do nothing
+        }
+    }
+    if (report->button1 || (max_contacts == 1 && (gesture == HOLD || gesture == POSSIBLE_TAP))) {
+        mouse_report.buttons |= 0x1;
+    }
+    if (report->button2 || gesture == RIGHT_CLICK) {
+        mouse_report.buttons |= 0x2;
+    }
+    if (report->button3) {
+        mouse_report.buttons |= 0x4;
+    }
+
+    last_report = *report;
 }
 
-void digitizer_tip_switch_on(void) {
-    digitizer_state.tip   = true;
-    digitizer_state.dirty = true;
-    digitizer_flush();
-}
+bool digitizer_task(void) {
+    static int last_contacts = 0;
+    report_digitizer_t report = { .fingers = {}, .contact_count = 0, .scan_time = 0, .button1 = digitizer_state.button1, .button2 = digitizer_state.button2, .button3 = digitizer_state.button3 };
+#ifdef DIGITIZER_HAS_STYLUS
+    report_digitizer_stylus_t stylus_report = {};
+    bool updated_stylus = false;
+#endif
+    int contacts = 0;
+#if DIGITIZER_TASK_THROTTLE_MS
+    static uint32_t last_exec = 0;
 
-void digitizer_tip_switch_off(void) {
-    digitizer_state.tip   = false;
-    digitizer_state.dirty = true;
-    digitizer_flush();
-}
+    if (timer_elapsed32(last_exec) < DIGITIZER_TASK_THROTTLE_MS) {
+        return false;
+    }
+    last_exec = timer_read32();
+#endif
+    if (digitizer_driver.get_report) {
+#ifdef DIGITIZER_MOTION_PIN
+        const bool process_one_more_event = update_gesture_state();
+        if (process_one_more_event || digitizer_motion_detected())
+#else
+	update_gesture_state();
+#endif
+        {
+#if defined(SPLIT_DIGITIZER_ENABLE)
+#    if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
+            digitizer_t new_state = DIGITIZER_THIS_SIDE ? digitizer_driver.get_report(digitizer_state) : shared_digitizer_report;
+#    else
+#        error "You need to define the side(s) the digitizer is on. DIGITIZER_LEFT / DIGITIZER_RIGHT"
+#    endif
+#else
+            digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
+#endif
+            int skip_count = 0;
 
-void digitizer_barrel_switch_on(void) {
-    digitizer_state.barrel = true;
-    digitizer_state.dirty  = true;
-    digitizer_flush();
-}
+            for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
+                const bool finger_contact = (new_state.contacts[i].type == FINGER) && ((new_state.contacts[i].amplitude > 0) || (digitizer_state.contacts[i].amplitude > 0));
+                const uint8_t finger_index = finger_contact ? report.contact_count :  DIGITIZER_CONTACT_COUNT - skip_count - 1;
 
-void digitizer_barrel_switch_off(void) {
-    digitizer_state.barrel = false;
-    digitizer_state.dirty  = true;
-    digitizer_flush();
-}
+                if (finger_contact) {
+                    //uprintf("F: %d %d\n", new_state.contacts[i].confidence, new_state.contacts[i].amplitude);
 
-void digitizer_set_position(float x, float y) {
-    digitizer_state.x     = x;
-    digitizer_state.y     = y;
-    digitizer_state.dirty = true;
-    digitizer_flush();
+                    if (new_state.contacts[i].amplitude > 0 && new_state.contacts[i].confidence) {
+                        // 'contacts' is the number of current contacts wheras 'report->contact_count' also counts fingers which have
+                        // been removed from the sensor since the last report.
+                        contacts++;
+                        report.fingers[finger_index].tip = true;
+                    }
+                    report.contact_count ++;
+                }
+                else {
+                    skip_count ++;
+                    report.fingers[finger_index].tip = false;
+                }
+                report.fingers[finger_index].contact_id = i;
+                report.fingers[finger_index].x          = new_state.contacts[i].x;
+                report.fingers[finger_index].y          = new_state.contacts[i].y;
+                report.fingers[finger_index].confidence = new_state.contacts[i].confidence;
+#ifdef DIGITIZER_HAS_STYLUS
+                if (new_state.contacts[i].type == STYLUS) {
+                    stylus_report.x = new_state.contacts[i].x;
+                    stylus_report.y = new_state.contacts[i].y;
+                    stylus_report.tip = (new_state.contacts[i].amplitude > 2) && new_state.contacts[i].confidence;
+                    stylus_report.in_range = 1;
+                    updated_stylus = true;
+                }
+                else if (digitizer_state.contacts[i].type == STYLUS) {
+                    // Drop out of range
+                    updated_stylus = true;
+                    stylus_report.x = digitizer_state.contacts[i].x;
+                    stylus_report.y = digitizer_state.contacts[i].y;
+                    stylus_report.in_range = 0;
+                    stylus_report.tip = 0;
+                }
+#endif
+            }
+            // TODO: Handle user modification of stylus state.
+            digitizer_state = digitizer_task_kb(new_state);
+
+#if DIGITIZER_CONTACT_COUNT > 0
+            static uint32_t scan_time = 0;
+
+            // Reset the scan_time after a period of inactivity (1000ms with no contacts)
+            static uint32_t inactivity_timer = 0;
+            if (last_contacts == 0 && contacts && timer_elapsed32(inactivity_timer) > 1000) {
+                scan_time = timer_read32();
+            }
+            inactivity_timer = timer_read32();
+            last_contacts = contacts;
+
+            // Microsoft require we report in 100us ticks. TODO: Move.
+            uint32_t scan = timer_elapsed32(scan_time);
+            report.scan_time = scan * 10;
+#endif
+        }
+    }
+    bool button_state_changed = false;
+
+#if defined(MOUSEKEY_ENABLE) && !defined(POINTING_DEVICE_ENABLE)
+    // Pointing device has a more fully featured mousekeys implementation,
+    // so we prefer it if pointing device is enabled.
+    const report_mouse_t mousekey_report = mousekey_get_report();
+    const bool button1 = !!(mousekey_report.buttons & 0x1);
+    const bool button2 = !!(mousekey_report.buttons & 0x2);
+    const bool button3 = !!(mousekey_report.buttons & 0x4);
+
+    if (digitizer_state.button1 != button1) {
+        digitizer_state.button1 = report.button1 = button1;
+        button_state_changed = true;
+    }
+    if (digitizer_state.button2 != button2) {
+        digitizer_state.button2 = report.button2 = button2;
+        button_state_changed = true;
+    }
+    if (digitizer_state.button3 != button3) {
+        digitizer_state.button3 = report.button3 = button3;
+        button_state_changed = true;
+    }
+
+    // Always send some sort of finger state along with the changed buttons
+    if (!report.contact_count && button_state_changed) {
+        // TODO: Why?
+    }
+#endif
+#ifdef DIGITIZER_HAS_STYLUS
+    if (updated_stylus) {
+        host_digitizer_stylus_send(&stylus_report);
+    }
+#endif
+    if (report.contact_count || button_state_changed) {
+        if (digitizer_send_mouse_reports) {
+            update_mouse_report(&report);
+#if !defined(POINTING_DEVICE_ENABLE)
+            host_mouse_send(&mouse_report);
+#endif
+        }
+        else {
+            host_digitizer_send(&report);
+        }
+    }
+
+#ifdef DIGITIZER_HAS_STYLUS
+    return report.contact_count > 0 || button_state_changed || updated_stylus;
+#else 
+    return report.contact_count > 0 || button_state_changed;
+#endif
 }

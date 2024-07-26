@@ -1,0 +1,34 @@
+{
+    "bootmagic": {
+        "matrix": [ 0, 0 ]
+    },
+    "matrix_pins": {
+        "direct": [["GP21", "GP22", "GP23", "GP24", "GP27", "GP26", "GP16"]]
+    },
+    "usb": {
+        "device_version": "1.0.1"
+    },
+    "layouts": {
+        "LAYOUT": {
+            "layout": [
+                {"matrix": [0, 0], "label":"Encoder 1", "x": 0, "y": 0},
+                {"matrix": [0, 1], "label":"Switch 1", "x": 1, "y": 0},
+                {"matrix": [0, 2], "label":"Switch 2", "x": 2, "y": 0},
+                {"matrix": [0, 3], "label":"Switch 3", "x": 3, "y": 0},
+                {"matrix": [0, 4], "label":"Switch 4", "x": 4, "y": 0},
+                {"matrix": [0, 5], "label":"Switch 5", "x": 5, "y": 0},
+                {"matrix": [0, 6], "label":"Encoder 2", "x": 6, "y": 0}
+            ]
+        }
+    },
+    "rgb_matrix": {
+        "layout": [
+            { "x": 1, "y": 0, "flags": 4 },
+            { "x": 2, "y": 0, "flags": 4 },
+            { "x": 3, "y": 0, "flags": 4 },
+            { "x": 4, "y": 0, "flags": 4 },
+            { "x": 5, "y": 0, "flags": 4 },
+            { "x": 0, "y": 0, "flags": 0 }
+        ]
+    }
+}
