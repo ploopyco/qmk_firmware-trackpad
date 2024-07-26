@@ -17,6 +17,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include "report.h"
 
 /**
  * \file
@@ -24,61 +25,88 @@
  * defgroup digitizer HID Digitizer
  * \{
  */
+typedef enum {
+    UNKNOWN,
+    FINGER,
+    STYLUS
+} digitizer_type_t;
 
 typedef struct {
-    bool  in_range : 1;
-    bool  tip : 1;
-    bool  barrel : 1;
-    float x;
-    float y;
-    bool  dirty;
+    digitizer_type_t type;
+    uint8_t amplitude;
+    uint8_t confidence : 1;
+    uint16_t x;
+    uint16_t y;
+} digitizer_contact_t;
+
+typedef struct {
+    digitizer_contact_t contacts[DIGITIZER_CONTACT_COUNT];
+    uint8_t  button1 : 1;
+    uint8_t  button2 : 1;
+    uint8_t  button3 : 1;
 } digitizer_t;
 
-extern digitizer_t digitizer_state;
-
 /**
- * \brief Send the digitizer report to the host if it is marked as dirty.
- */
-void digitizer_flush(void);
-
-/**
- * \brief Assert the "in range" indicator, and flush the report.
- */
-void digitizer_in_range_on(void);
-
-/**
- * \brief Deassert the "in range" indicator, and flush the report.
- */
-void digitizer_in_range_off(void);
-
-/**
- * \brief Assert the tip switch, and flush the report.
- */
-void digitizer_tip_switch_on(void);
-
-/**
- * \brief Deassert the tip switch, and flush the report.
- */
-void digitizer_tip_switch_off(void);
-
-/**
- * \brief Assert the barrel switch, and flush the report.
- */
-void digitizer_barrel_switch_on(void);
-
-/**
- * \brief Deassert the barrel switch, and flush the report.
- */
-void digitizer_barrel_switch_off(void);
-
-/**
- * \brief Set the absolute X and Y position of the digitizer contact, and flush the report.
+ * \brief Gets the current digitizer state.
  *
- * \param x The X value of the contact position, from 0 to 1.
- * \param y The Y value of the contact position, from 0 to 1.
+ * \return The current digitizer state
  */
-void digitizer_set_position(float x, float y);
+digitizer_t digitizer_get_state(void);
 
-void host_digitizer_send(digitizer_t *digitizer);
+/**
+ * \brief Sets the digitizer state, the new state will be sent when the digitizer task next runs.
+ */
+void digitizer_set_state(digitizer_t digitizer_state);
+
+__attribute__((weak)) void digitizer_init_kb(void);
+
+/**
+ * @brief User level code pointing device initialisation
+ *
+ */
+__attribute__((weak)) void digitizer_init_user(void);
+
+/**
+ * @brief Weak function allowing for user level digitizer state modification
+ *
+ * Takes digitizer_t struct allowing modification at user level then returns digitizer_t.
+ *
+ * @param[in] digitizer_state digitizer_t
+ * @return digitizer_t
+ */
+__attribute__((weak)) digitizer_t digitizer_task_user(digitizer_t digitizer_state);
+
+/**
+ * @brief Weak function allowing for keyboard level digitizer state modification
+ *
+ * Takes digitizer_t struct allowing modification at keyboard level then returns digitizer_t.
+ *
+ * @param[in] digitizer_state digitizer_t
+ * @return digitizer_t
+ */
+__attribute__((weak)) digitizer_t digitizer_task_kb(digitizer_t digitizer_state);
+
+/**
+ * \brief Initializes the digitizer feature.
+ */
+void digitizer_init(void);
+
+/**
+ * \brief Task processing routine for the digitizer feature. This function polls the digitizer hardware
+ * and sends events to the host as required.
+ * 
+ * \return true if a new event was sent
+ */
+bool digitizer_task(void);
+
+#if defined(SPLIT_DIGITIZER_ENABLE)
+/**
+ * \brief Updates the digitizer report from the slave half.
+ */
+void digitizer_set_shared_report(digitizer_t report);
+#    if !defined(DIGITIZER_TASK_THROTTLE_MS)
+#        define DIGITIZER_TASK_THROTTLE_MS 1
+#    endif
+#endif     // defined(SPLIT_DIGITIZER_ENABLE)
 
 /** \} */

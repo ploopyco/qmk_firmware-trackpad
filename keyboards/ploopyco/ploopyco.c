@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include "ploopyco.h"
 #include "analog.h"
 #include "opt_encoder.h"
@@ -128,6 +127,7 @@ void encoder_driver_task(void) {
 }
 #endif
 
+#ifndef PAVONIS
 void toggle_drag_scroll(void) {
     is_drag_scroll ^= 1;
 }
@@ -199,6 +199,7 @@ bool process_record_kb(uint16_t keycode, keyrecord_t* record) {
 
     return true;
 }
+#endif
 
 // Hardware Setup
 void keyboard_pre_init_kb(void) {
@@ -229,6 +230,7 @@ void keyboard_pre_init_kb(void) {
     keyboard_pre_init_user();
 }
 
+#ifndef PAVONIS
 void pointing_device_init_kb(void) {
     keyboard_config.raw = eeconfig_read_kb();
     if (keyboard_config.dpi_config > DPI_OPTION_SIZE) {
@@ -242,3 +244,4 @@ void eeconfig_init_kb(void) {
     eeconfig_update_kb(keyboard_config.raw);
     eeconfig_init_user();
 }
+#endif

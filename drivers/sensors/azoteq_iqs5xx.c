@@ -5,6 +5,10 @@
 #include "azoteq_iqs5xx.h"
 #include "pointing_device_internal.h"
 #include "wait.h"
+#include "debug.h"
+#ifdef DIGITIZER_ENABLE
+#   include "digitizer.h"
+#endif
 
 #ifndef AZOTEQ_IQS5XX_ADDRESS
 #    define AZOTEQ_IQS5XX_ADDRESS (0x74 << 1)
@@ -15,6 +19,7 @@
 
 #define AZOTEQ_IQS5XX_REG_PRODUCT_NUMBER 0x0000
 #define AZOTEQ_IQS5XX_REG_PREVIOUS_CYCLE_TIME 0x000C
+#define AZOTEQ_IQS5XX_REG_ABSOLUTE_X_POSITION 0x0016
 #define AZOTEQ_IQS5XX_REG_SYSTEM_CONTROL_1 0x0432
 #define AZOTEQ_IQS5XX_REG_REPORT_RATE_ACTIVE 0x057A
 #define AZOTEQ_IQS5XX_REG_SYSTEM_CONFIG_0 0x058E
@@ -76,20 +81,6 @@
 #endif
 #ifndef AZOTEQ_IQS5XX_ZOOM_CONSECUTIVE_DISTANCE
 #    define AZOTEQ_IQS5XX_ZOOM_CONSECUTIVE_DISTANCE 0x19
-#endif
-
-#if defined(AZOTEQ_IQS5XX_TPS43)
-#    define AZOTEQ_IQS5XX_WIDTH_MM 43
-#    define AZOTEQ_IQS5XX_HEIGHT_MM 40
-#    define AZOTEQ_IQS5XX_RESOLUTION_X 2048
-#    define AZOTEQ_IQS5XX_RESOLUTION_Y 1792
-#elif defined(AZOTEQ_IQS5XX_TPS65)
-#    define AZOTEQ_IQS5XX_WIDTH_MM 65
-#    define AZOTEQ_IQS5XX_HEIGHT_MM 49
-#    define AZOTEQ_IQS5XX_RESOLUTION_X 3072
-#    define AZOTEQ_IQS5XX_RESOLUTION_Y 2048
-#elif !defined(AZOTEQ_IQS5XX_WIDTH_MM) && !defined(AZOTEQ_IQS5XX_HEIGHT_MM)
-#    error "You must define one of the available azoteq trackpads or specify at least the width and height"
 #endif
 
 #define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
@@ -421,3 +412,23 @@ report_mouse_t azoteq_iqs5xx_get_report(report_mouse_t mouse_report) {
 
     return temp_report;
 }
+
+#ifdef DIGITIZER_ENABLE
+digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
+    azoteq_iqs5xx_digitizer_data_t digitizer_data = {0};
+    azoteq_iqs5xx_wake();
+
+    i2c_status_t                           status = i2c_readReg16(AZOTEQ_IQS5XX_ADDRESS, AZOTEQ_IQS5XX_REG_ABSOLUTE_X_POSITION, (uint8_t *)&digitizer_data, sizeof(azoteq_iqs5xx_digitizer_data_t), AZOTEQ_IQS5XX_TIMEOUT_MS);
+    if (status == I2C_STATUS_SUCCESS) {
+        for (int i = 0; i < 5; i++) {
+            digitizer_report.contacts[i].x = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].x.h, digitizer_data.fingers[i].x.l);
+            digitizer_report.contacts[i].y = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].y.h, digitizer_data.fingers[i].y.l);
+
+            digitizer_report.contacts[i].confidence = 1;
+            digitizer_report.contacts[i].amplitude =  AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].strength.h, digitizer_data.fingers[i].strength.l);
+        }
+        azoteq_iqs5xx_end_session();
+    }
+    return digitizer_report;
+}
+#endif

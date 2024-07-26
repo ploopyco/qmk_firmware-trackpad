@@ -1,0 +1,37 @@
+{
+    "keyboard_name": "Ploopy Pavonis Trackpad",
+    "url": "www.ploopy.co",
+    "maintainer": "ploopyco",
+    "manufacturer": "Ploopy Corporation",
+    "processor": "RP2040",
+    "bootloader": "rp2040",
+    "features": {
+        "bootmagic": false,
+        "command": false,
+        "console": true,
+        "extrakey": true,
+        "mousekey": true,
+        "nkro": false,
+        "rgb_matrix": false,
+        "digitizer": true,
+        "pointing_device": true
+    },
+    "usb": {
+        "device_version": "1.0.0",
+        "pid": "0x0000",
+        "vid": "0xFEED"
+    },
+    "matrix_pins": {
+        "direct": [
+            [null]
+        ]
+    },
+    "debounce": 0,
+    "layouts": {
+        "LAYOUT": {
+            "layout": [
+                {"x": 0, "y": 0, "matrix": [0, 0]}
+            ]
+        }
+    }
+}
