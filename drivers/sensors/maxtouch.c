@@ -8,6 +8,10 @@
 #include "digitizer.h"
 #include "digitizer_driver.h"
 
+#ifdef MAXTOUCH_DEBUG
+    #include "raw_hid.h"
+#endif
+
 #define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
 #define CPI_TO_SAMPLES(cpi, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((cpi) * (dist_in_mm) * 10, 254))
 #define SWAP_BYTES(a) ((a << 8) | (a >> 8))
@@ -425,9 +429,11 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
 
                     if (message.data[0] & (1<<6))
                         uprintf("TCH DETECT %d, SUPPRESS %d, COUNT %d, TCHAREA %u, ATCHAREA %u\n", (message.data[0] & (1<<7) ? 1 : 0), (message.data[0] & (1<<6) ? 1 : 0), fingers, tcharea, atcharea);
+#ifdef MAXTOUCH_BOOTLOADER_GESTURE
                     // Debug feature - reboot to bootloader if 5 fingers are MXT_DOWN
                     // TODO: A better gesture.
                     if (fingers == 5) reset_keyboard();
+#endif
                 }
                 else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
                          (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
@@ -490,3 +496,75 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
     }
     return digitizer_report;
 }
+
+#ifdef MAXTOUCH_DEBUG
+#define MAXTOUCH_DEBUG_MAGIC 0x9A4D
+#define MAXTOUCH_DEBUG_VERSION 0x0001
+
+typedef enum {
+    MAXTOUCH_DEBUG_CHECK_VERSION,
+    MAXTOUCH_DEBUG_BOOTLOADER,
+    MAXTOUCH_DEBUG_READ,
+    MAXTOUCH_DEBUG_WRITE
+} maxtouch_debug_command;
+
+typedef enum {
+    MAXTOUCH_DEBUG_OK,
+    MAXTOUCH_DEBUG_INVALID_VERSION,
+    MAXTOUCH_DEBUG_INVALID_CMD,
+    MAXTOUCH_DEBUG_INVALID_LENGTH,
+    MAXTOUCH_DEBUG_I2C_ERR
+} maxtouch_debug_status;
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    maxtouch_debug_status status = MAXTOUCH_DEBUG_OK;
+    maxtouch_debug_command cmd = (maxtouch_debug_command) data[0];
+
+    switch (cmd) {
+        case MAXTOUCH_DEBUG_CHECK_VERSION: {
+            const uint16_t magic = (data[1] << 8) | data[2];
+            const uint16_t version = (data[3] << 8) | data[4];
+            if (magic != MAXTOUCH_DEBUG_MAGIC || version != MAXTOUCH_DEBUG_VERSION) {
+                status = MAXTOUCH_DEBUG_INVALID_VERSION;
+            }
+            break;
+        }
+        case MAXTOUCH_DEBUG_BOOTLOADER: {
+            reset_keyboard();
+            break;
+        }
+        case MAXTOUCH_DEBUG_READ: {
+            const uint16_t read_address = (data[1] << 8) | data[2];
+            const uint16_t read_length  = data[3];
+            if (read_length > 0x1c) {
+                status = MAXTOUCH_DEBUG_INVALID_LENGTH;
+            }
+            else {
+                if (i2c_readReg16(MXT336UD_ADDRESS, read_address, (uint8_t *)&data[4], read_length, MXT_I2C_TIMEOUT_MS) != I2C_STATUS_SUCCESS) {
+                    status = MAXTOUCH_DEBUG_I2C_ERR;
+                }
+            }
+            break;
+        }
+        case MAXTOUCH_DEBUG_WRITE: {
+            const uint16_t write_address = (data[1] << 8) | data[2];
+            const uint16_t write_length  = data[3];
+            if (write_length > 0x1c) {
+                status = MAXTOUCH_DEBUG_INVALID_LENGTH;
+            }
+            else {
+                if (i2c_writeReg16(MXT336UD_ADDRESS, write_address, (uint8_t *)&data[4], write_length, MXT_I2C_TIMEOUT_MS) != I2C_STATUS_SUCCESS) {
+                    status = MAXTOUCH_DEBUG_I2C_ERR;
+                }
+            }
+            break;
+        }
+        default: {
+            status = MAXTOUCH_DEBUG_INVALID_CMD;
+        }
+    }
+
+    data[0] = (uint8_t) status;
+    raw_hid_send(data, length);
+}
+#endif
