@@ -195,6 +195,10 @@ ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
     endif
 endif
 
+ifeq ($(strip $(MAXTOUCH_DEBUG)), yes)
+    RAW_ENABLE = yes
+    OPT_DEFS += -DMAXTOUCH_DEBUG
+endif
 
 QUANTUM_PAINTER_ENABLE ?= no
 ifeq ($(strip $(QUANTUM_PAINTER_ENABLE)), yes)
