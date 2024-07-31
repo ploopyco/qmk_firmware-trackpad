@@ -67,30 +67,28 @@
     #ifndef MXT_TOUCH_THRESHOLD
         #define MXT_TOUCH_THRESHOLD 18
     #endif
-    #ifndef MXT_TOUCH_HYST
-        #define MXT_TOUCH_HYST 0
-    #endif
     #ifndef MXT_GAIN
         #define MXT_GAIN 4
-    #endif
-    #ifndef MXT_INTERNAL_TOUCH_HYST
-        #define MXT_INTERNAL_TOUCH_HYST 0
     #endif
 #elif MXT_SURFACE_TYPE==ACRYLIC
     #ifndef MXT_TOUCH_THRESHOLD
         #define MXT_TOUCH_THRESHOLD 12
     #endif
-    #ifndef MXT_TOUCH_HYST
-        #define MXT_TOUCH_HYST 0
-    #endif
     #ifndef MXT_GAIN
         #define MXT_GAIN 5
     #endif
-    #ifndef MXT_INTERNAL_TOUCH_HYST
-        #define MXT_INTERNAL_TOUCH_HYST 0
-    #endif
 #else
     #error "Unknown surface type."
+#endif
+
+#ifndef MXT_TOUCH_HYST
+    #define MXT_TOUCH_HYST 0
+#endif
+#ifndef MXT_INTERNAL_TOUCH_HYST
+    #define MXT_INTERNAL_TOUCH_HYST 0
+#endif
+#ifndef MXT_INTERNAL_TOUCH_THRESHOLD
+    #define MXT_INTERNAL_TOUCH_THRESHOLD 0
 #endif
 
 #ifndef MXT_DX_GAIN
@@ -276,12 +274,12 @@ void maxtouch_init(void) {
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
         t47.ctrl = 1;                       // Enable stylus detection
-        t47.contmax = 120;                    // The maximum contact diameter of the stylus in 0.1mm increments
-        t47.maxtcharea = 180;               // Maximum touch area a contact can have an still be considered a stylus
-        t47.stability = 50;                  // Higher values prevent the stylus from dropping out when it gets small
+        t47.contmax = 70;                   // The maximum contact diameter of the stylus in 0.1mm increments
+        t47.maxtcharea = 90;                // Maximum touch area a contact can have an still be considered a stylus
+        t47.stability = 50;                 // Higher values prevent the stylus from dropping out when it gets small
         t47.confthr = 4;                    // Higher values increase the chances of correctly detecting as stylus, but introduce a delay
-        t47.amplthr = 100;                  // Any touches smaller than this are classified as stylus touches
-        t47.hoversup = 240;                   // 255 Disables hover supression
+        t47.amplthr = 40;                   // Any touches smaller than this are classified as stylus touches
+        t47.hoversup = 240;                 // 255 Disables hover supression
         t47.maxnumsty = 1;                  // Only report a single stylus
         i2c_writeReg16(MXT336UD_ADDRESS, t47_proci_stylus_address, (uint8_t *)&t47, sizeof(mxt_proci_stylus_t47), MXT_I2C_TIMEOUT_MS);
     }
@@ -329,7 +327,7 @@ void maxtouch_init(void) {
         cfg.dxgain                          = MXT_DX_GAIN;  // Dual transmit gain for mutual capacitance measurements (255 = auto calibrate)
         cfg.tchthr                          = MXT_TOUCH_THRESHOLD;  // Touch threshold
         cfg.tchhyst                         = MXT_TOUCH_HYST;
-        //cfg.intthr                          = 30;
+        cfg.intthr                          = MXT_INTERNAL_TOUCH_THRESHOLD;
         cfg.intthryst                       = MXT_INTERNAL_TOUCH_HYST;
         cfg.mrgthr                          = 2;    // Merge threshold
         cfg.mrghyst                         = 1;    // Merge threshold hysteresis

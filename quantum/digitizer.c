@@ -377,6 +377,7 @@ bool digitizer_task(void) {
 #ifdef DIGITIZER_HAS_STYLUS
     report_digitizer_stylus_t stylus_report = {};
     bool updated_stylus = false;
+    bool stylus_present = false;
 #endif
     int contacts = 0;
 #if DIGITIZER_TASK_THROTTLE_MS
@@ -405,18 +406,18 @@ bool digitizer_task(void) {
             digitizer_t new_state = digitizer_driver.get_report(digitizer_state);
 #endif
             int skip_count = 0;
-
             for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
                 const bool finger_contact = (new_state.contacts[i].type == FINGER) && ((new_state.contacts[i].amplitude > 0) || (digitizer_state.contacts[i].amplitude > 0));
                 const uint8_t finger_index = finger_contact ? report.contact_count :  DIGITIZER_CONTACT_COUNT - skip_count - 1;
 
+                if (new_state.contacts[i].type != UNKNOWN)
+                {
+                    // 'contacts' is the number of current contacts wheras 'report->contact_count' also counts fingers which have
+                    // been removed from the sensor since the last report.
+                    contacts++;
+                }
                 if (finger_contact) {
-                    //uprintf("F: %d %d\n", new_state.contacts[i].confidence, new_state.contacts[i].amplitude);
-
                     if (new_state.contacts[i].amplitude > 0 && new_state.contacts[i].confidence) {
-                        // 'contacts' is the number of current contacts wheras 'report->contact_count' also counts fingers which have
-                        // been removed from the sensor since the last report.
-                        contacts++;
                         report.fingers[finger_index].tip = true;
                     }
                     report.contact_count ++;
@@ -431,11 +432,12 @@ bool digitizer_task(void) {
                 report.fingers[finger_index].confidence = new_state.contacts[i].confidence;
 #ifdef DIGITIZER_HAS_STYLUS
                 if (new_state.contacts[i].type == STYLUS) {
+                    updated_stylus = true;
                     stylus_report.x = new_state.contacts[i].x;
                     stylus_report.y = new_state.contacts[i].y;
                     stylus_report.tip = (new_state.contacts[i].amplitude > 2) && new_state.contacts[i].confidence;
                     stylus_report.in_range = 1;
-                    updated_stylus = true;
+                    stylus_present = true;
                 }
                 else if (digitizer_state.contacts[i].type == STYLUS) {
                     // Drop out of range
@@ -447,6 +449,15 @@ bool digitizer_task(void) {
                 }
 #endif
             }
+#ifdef DIGITIZER_HAS_STYLUS
+            // If the last touch was low confidence, we may be marked as in range, but not pressed.
+            if (stylus_report.in_range && !stylus_present) {
+                updated_stylus = true;
+                stylus_report.tip = 0;
+                stylus_report.in_range = 0;
+            }
+#endif
+
             // TODO: Handle user modification of stylus state.
             digitizer_state = digitizer_task_kb(new_state);
 
