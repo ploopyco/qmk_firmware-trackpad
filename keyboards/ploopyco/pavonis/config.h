@@ -16,9 +16,9 @@
 #define MXT_SENSOR_HEIGHT_MM 99
 
 // TODO: Tweak these if the sensor tracks poorly
-#define MXT_TOUCH_THRESHOLD 45
-#define MXT_GAIN 13
-#define MXT_TOUCH_HYST 4
+#define MXT_TOUCH_THRESHOLD 42
+#define MXT_GAIN 10
+#define MXT_TOUCH_HYST 3
 #define MXT_INTERNAL_TOUCH_HYST 2
 #define MXT_INTERNAL_TOUCH_THRESHOLD 30
 
