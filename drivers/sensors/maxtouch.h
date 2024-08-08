@@ -176,7 +176,9 @@ typedef struct PACKED {
     unsigned char supstyto;
     unsigned char maxnumsty;
     unsigned char xedgectrl;
+    unsigned char xedgedist;
     unsigned char yedgectrl;
+    unsigned char yedgedist;
     unsigned char supto;
     unsigned char supclassmode;
     unsigned char dxxedgectrl;
