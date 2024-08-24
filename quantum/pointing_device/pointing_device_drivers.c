@@ -492,6 +492,17 @@ const pointing_device_driver_t pointing_device_driver = {
 };
 // clang-format on
 
+
+#elif defined(POINTING_DEVICE_DRIVER_bela_trill)
+// clang-format off
+const pointing_device_driver_t pointing_device_driver = {
+    .init       = bela_trill_init,
+    .get_report = bela_trill_get_report,
+    .set_cpi    = NULL,
+    .get_cpi    = NULL
+};
+// clang-format on
+
 #else
 __attribute__((weak)) void           pointing_device_driver_init(void) {}
 __attribute__((weak)) report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
@@ -510,5 +521,4 @@ const pointing_device_driver_t pointing_device_driver = {
     .set_cpi    = pointing_device_driver_set_cpi
 };
 // clang-format on
-
 #endif
