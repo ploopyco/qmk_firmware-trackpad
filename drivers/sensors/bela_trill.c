@@ -106,7 +106,6 @@ report_mouse_t bela_trill_get_report(report_mouse_t mouse_report) {
             // No new data
             return mouse_report;
         }
-        mouse_report.buttons = 0;
 
         if (activity) {
             for (; h_touch_count < 4; h_touch_count++) {
@@ -175,6 +174,14 @@ report_mouse_t bela_trill_get_report(report_mouse_t mouse_report) {
                 }
             }
             else {
+                if (timer_elapsed32(timer) < BELA_TRILL_TAP_TIME) {
+                    // Tap hold gesture
+                    mouse_report.buttons |= 0x1;
+                }
+                else {
+                    // Release any taps.
+                    mouse_report.buttons = 0x0;
+                }
                 timer = timer_read32();
                 last_x = BELA_NO_TOUCH;
                 last_y = BELA_NO_TOUCH;
@@ -183,7 +190,16 @@ report_mouse_t bela_trill_get_report(report_mouse_t mouse_report) {
         }
         else {
             if (contact && timer_elapsed32(timer) < BELA_TRILL_TAP_TIME) {
+                // Tap gesture
                 mouse_report.buttons |= 0x1;
+                // Reset the timer - if another tap occurs we go to tap hold
+                timer = timer_read32();
+            }
+            else {
+                if (timer_elapsed32(timer) > BELA_TRILL_TAP_TIME) {
+                    // Release any taps.
+                    mouse_report.buttons = 0x0;
+                }
             }
 
             last_x = BELA_NO_TOUCH;
