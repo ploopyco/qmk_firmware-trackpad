@@ -20,6 +20,7 @@
 #include "timer.h"
 #include "gpio.h"
 #include "keyboard.h"
+#include "action.h"
 #ifdef MOUSEKEY_ENABLE
 #    include "mousekey.h"
 #endif
@@ -42,6 +43,18 @@
 
 #ifndef DIGITIZER_SCROLL_DIVISOR
 #    define DIGITIZER_SCROLL_DIVISOR 4
+#endif
+
+#ifndef DIGITIZER_MOUSE_SWIPE_TIME
+#    define DIGITIZER_MOUSE_SWIPE_TIME 500
+#endif
+
+#ifndef DIGITIZER_MOUSE_SWIPE_DISTANCE
+#    define DIGITIZER_MOUSE_SWIPE_DISTANCE 300
+#endif
+
+#ifndef DIGITIZER_MOUSE_SWIPE_THRESHOLD
+#    define DIGITIZER_MOUSE_SWIPE_THRESHOLD 100
 #endif
 
 #if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
@@ -205,10 +218,7 @@ __attribute__((weak)) digitizer_t digitizer_task_kb(digitizer_t digitizer_state)
     return digitizer_task_user(digitizer_state);
 }
 
-
 void digitizer_init(void) {
-    uprintf("digitizer_init\n");
-
 #if defined(SPLIT_DIGITIZER_ENABLE)
     if (!(DIGITIZER_THIS_SIDE))
         return;
@@ -242,7 +252,9 @@ typedef enum {
     NO_GESTURE,
     POSSIBLE_TAP,
     HOLD,
-    RIGHT_CLICK
+    RIGHT_CLICK,
+    MIDDLE_CLICK,
+    SWIPE
 } gesture_state;
 
 
@@ -254,11 +266,12 @@ static bool update_gesture_state(void) {
         if (gesture == POSSIBLE_TAP) {
             const uint32_t duration = timer_elapsed32(tap_time);
             if (duration >= DIGITIZER_MOUSE_TAP_HOLD_TIME) {
+                uprintf("Clear Tap\n");
                 gesture = NO_GESTURE;
                 return true;
             }
         }
-        if (gesture == RIGHT_CLICK) {
+        if (gesture == RIGHT_CLICK || gesture == MIDDLE_CLICK) {
             gesture = NO_GESTURE;
             return true;
         }
@@ -281,52 +294,57 @@ static void update_mouse_report(report_digitizer_t* report) {
     int last_contacts = 0;
 
     for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
-        if (report->fingers[i].tip) {
+        if (report->fingers[i].tip && report->fingers[i].confidence) {
             contacts ++;
         }
-        if (last_report.fingers[i].tip) {
+        if (last_report.fingers[i].tip && last_report.fingers[i].confidence) {
             last_contacts ++;
         }
     }
-
     if (last_contacts == 0) {
-        max_contacts = 0;
-
         if (contacts > 0) {
             contact_start_time = timer_read32();
             contact_start_x = report->fingers[0].x;
             contact_start_y = report->fingers[0].y;
         }
 
-        if (gesture == POSSIBLE_TAP) {
+        if (contacts == 1 && gesture == POSSIBLE_TAP) {
             gesture = HOLD;
         }
+
+        if (gesture == SWIPE) {
+            gesture = NO_GESTURE;
+        }
+        max_contacts = contacts;
     }
     else
     {
         max_contacts = MAX(contacts, max_contacts);
+
+        const uint32_t duration = timer_elapsed32(contact_start_time);
+        const int32_t distance_x = report->fingers[0].x - contact_start_x;
+        const int32_t distance_y = report->fingers[0].y - contact_start_y;
+
         switch (contacts) {
             case 0: {
-                // Treat short contacts with little travel as a tap
-                const uint32_t duration = timer_elapsed32(contact_start_time);
-                const uint32_t distance_x = abs(report->fingers[0].x - contact_start_x);
-                const uint32_t distance_y = abs(report->fingers[0].y - contact_start_y);
-
                 if (gesture == HOLD) {
                     gesture = NO_GESTURE;
                 }
 
+                // Treat short contacts with little travel as a tap
                 if (duration < DIGITIZER_MOUSE_TAP_TIME) {
                     // If we tapped quickly, without moving far, send a tap
                     if (max_contacts == 2) {
-                        // Right click
-			            gesture = RIGHT_CLICK;
+                        gesture = RIGHT_CLICK;
                         tap_time = timer_read32();
                     }
-                    else if (distance_x < DIGITIZER_MOUSE_TAP_DISTANCE && distance_y < DIGITIZER_MOUSE_TAP_DISTANCE) {
+                    else if (max_contacts == 3) {
+                        gesture = MIDDLE_CLICK;
+                        tap_time = timer_read32();
+                    }
+                    else if (abs(distance_x) < DIGITIZER_MOUSE_TAP_DISTANCE && abs(distance_y) < DIGITIZER_MOUSE_TAP_DISTANCE) {
                         // Left click
                         gesture = POSSIBLE_TAP;
-                        mouse_report.buttons |= 0x1;
                         tap_time = timer_read32();
                     }
                 }
@@ -353,6 +371,25 @@ static void update_mouse_report(report_digitizer_t* report) {
                     mouse_report.v      = v / DIGITIZER_SCROLL_DIVISOR;
                 }
                 break;
+            case 3:
+                if (gesture != SWIPE && duration < DIGITIZER_MOUSE_SWIPE_TIME) {
+                    if (distance_x > 0 && distance_x > DIGITIZER_MOUSE_SWIPE_DISTANCE && abs(distance_y) < DIGITIZER_MOUSE_SWIPE_THRESHOLD) {
+                        // Swipe right
+                        mouse_report.buttons |= 0x10;
+                        gesture = SWIPE;
+                    }
+                    if (distance_x < 0 && distance_x < -DIGITIZER_MOUSE_SWIPE_DISTANCE && abs(distance_y) < DIGITIZER_MOUSE_SWIPE_THRESHOLD) {
+                        // Swipe left
+                        mouse_report.buttons |= 0x8;
+                        gesture = SWIPE;
+                    }
+                    if (distance_y < 0 && distance_y < -DIGITIZER_MOUSE_SWIPE_DISTANCE && abs(distance_x) < DIGITIZER_MOUSE_SWIPE_THRESHOLD) {
+                        // Swipe up
+                        tap_code(KC_LEFT_GUI);
+                        gesture = SWIPE;
+                    }
+                }
+                break;
             default:
                 break;
                 // Do nothing
@@ -364,7 +401,7 @@ static void update_mouse_report(report_digitizer_t* report) {
     if (report->button2 || gesture == RIGHT_CLICK) {
         mouse_report.buttons |= 0x2;
     }
-    if (report->button3) {
+    if (report->button3 || gesture == MIDDLE_CLICK) {
         mouse_report.buttons |= 0x4;
     }
 
@@ -380,6 +417,8 @@ bool digitizer_task(void) {
     bool stylus_present = false;
 #endif
     int contacts = 0;
+    bool gesture_changed = false;
+
 #if DIGITIZER_TASK_THROTTLE_MS
     static uint32_t last_exec = 0;
 
@@ -389,11 +428,9 @@ bool digitizer_task(void) {
     last_exec = timer_read32();
 #endif
     if (digitizer_driver.get_report) {
+        gesture_changed = update_gesture_state();
 #ifdef DIGITIZER_MOTION_PIN
-        const bool process_one_more_event = update_gesture_state();
-        if (process_one_more_event || digitizer_motion_detected())
-#else
-	update_gesture_state();
+        if (gesture_changed || digitizer_motion_detected())
 #endif
         {
 #if defined(SPLIT_DIGITIZER_ENABLE)
@@ -511,14 +548,14 @@ bool digitizer_task(void) {
         host_digitizer_stylus_send(&stylus_report);
     }
 #endif
-    if (report.contact_count || button_state_changed) {
+    if (report.contact_count || button_state_changed || gesture_changed) {
         if (digitizer_send_mouse_reports) {
             update_mouse_report(&report);
 #if !defined(POINTING_DEVICE_ENABLE)
             host_mouse_send(&mouse_report);
 #endif
         }
-        else {
+            else {
             host_digitizer_send(&report);
         }
     }
