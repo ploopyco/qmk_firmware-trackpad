@@ -493,7 +493,8 @@ typedef enum {
 
 typedef enum {
     MAXTOUCH_DEBUG_REBOOT_BOOTLOADER,
-    MAXTOUCH_DEBUG_MOUSE_MODE
+    MAXTOUCH_DEBUG_SET_MOUSE_MODE,
+    MAXTOUCH_DEBUG_GET_MOUSE_MODE
 } maxtouch_debug_command_type;
 
 typedef enum {
@@ -523,9 +524,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 case MAXTOUCH_DEBUG_REBOOT_BOOTLOADER:
                     reset_keyboard();
                     break;
-                case MAXTOUCH_DEBUG_MOUSE_MODE: {
+                case MAXTOUCH_DEBUG_SET_MOUSE_MODE: {
                     extern bool digitizer_send_mouse_reports;
                     digitizer_send_mouse_reports = (bool) data[2];
+                    break;
+                }
+                case MAXTOUCH_DEBUG_GET_MOUSE_MODE: {
+                    extern bool digitizer_send_mouse_reports;
+                    data[1] = digitizer_send_mouse_reports;
                     break;
                 }
                 default:
