@@ -125,6 +125,17 @@ typedef struct PACKED {
     unsigned char cfg;
 } mxt_gen_acquisitionconfig_t8;
 
+static const unsigned char T42_CTRL_ENABLE = 0x01;
+static const unsigned char T42_CTRL_SHAPEEN = 0x04;
+static const unsigned char T42_CTRL_DISLOBJ = 0x08;
+static const unsigned char T42_CTRL_DISTLOCK = 0x10;
+static const unsigned char T42_CTRL_SUPDISTEN = 0x20;
+static const unsigned char T42_CTRL_EDGESUP = 0x40;
+
+static const unsigned char T42_CFG_RELAXCLOSEUP = 0x01;
+static const unsigned char T42_CFG_RELAXDIAGSUP = 0x02;
+static const unsigned char T42_CFG_SUPTCHRPTEN = 0x04;
+
 typedef struct PACKED {
     unsigned char ctrl;
     unsigned char reserved;
@@ -142,6 +153,9 @@ typedef struct PACKED {
     unsigned char edgesupstrength;
 } mxt_proci_touchsupression_t42;
 
+static const unsigned char T46_CFG_SYNCLOSSMODE = 0x02;
+static const unsigned char T46_CFG_DELTASHIFT = 0x04;
+
 typedef struct PACKED {
     unsigned char reserved[2];
     unsigned char idlesyncsperx;
@@ -157,6 +171,7 @@ typedef struct PACKED {
     unsigned char cfg;
 } mxt_spt_cteconfig_t46;
 
+static const unsigned char T47_CFG_SUPSTY = 0x20;
 
 typedef struct PACKED {
     unsigned char ctrl;
@@ -201,6 +216,8 @@ typedef struct PACKED {
     unsigned char satbdxxhi;
     unsigned char movhistcfg;
 } mxt_proci_stylus_t47;
+
+
 
 typedef struct PACKED {
     unsigned char ctrl;
