@@ -48,12 +48,12 @@
 #endif
 
 #ifndef MXT_CPI
-    #define MXT_CPI 600
+    #define MXT_CPI 400
 #endif
 
 #ifndef MXT_RECALIBRATE_AFTER
     // Steps of 200ms, 25 = 5 seconds
-    #define MXT_RECALIBRATE_AFTER 25
+    #define MXT_RECALIBRATE_AFTER 50
 #endif
 
 #ifndef MXT_SURFACE_TYPE
@@ -225,9 +225,9 @@ void maxtouch_init(void) {
     // Configure power saving features
     if (t7_powerconfig_address) {
         mxt_gen_powerconfig_t7 t7 = {};
-        t7.idleacqint   = 32;   // The acquisition interval while in idle mode
-        t7.actacqint    = 16;   // The acquisition interval while in active mode
-        t7.actv2idelto  = 50;   // The timeout for transitioning from active to idle mode
+        t7.idleacqint   = 255;   // The acquisition interval while in idle mode. 255 is free-running (as fast as possible).
+        t7.actacqint    = 255;   // The acquisition interval while in active mode. 255 is free-running (as fast as possible).
+        t7.actv2idelto  = 50;    // The timeout for transitioning from active to idle mode
         t7.cfg          = T7_CFG_ACTVPIPEEN | T7_CFG_IDLEPIPEEN;    // Enable pipelining in both active and idle mode
 
         i2c_writeReg16(MXT336UD_ADDRESS, t7_powerconfig_address, (uint8_t *)&t7, sizeof(mxt_gen_powerconfig_t7), MXT_I2C_TIMEOUT_MS);
@@ -251,14 +251,16 @@ void maxtouch_init(void) {
     if (t42_proci_touchsupression_address) {
 
         mxt_proci_touchsupression_t42 t42 = {};
-        t42.ctrl = 0;
-        t42.maxapprarea = 0;
-        t42.maxtcharea = 0;
-        t42.maxnumtchs = 0;
-        t42.supdist = 0;
+		
+        t42.ctrl = T42_CTRL_ENABLE | T42_CTRL_SHAPEEN;
+        t42.maxapprarea = 0; 		//Default (0): suppress any touch that approaches >40 channels.
+        t42.maxtcharea = 0; 		//Default (0): suppress any touch that covers >35 channels.
+        t42.maxnumtchs = 6; 		//Suppress all touches if >6 are detected.
+        t42.supdist = 0; 			//Default (0): Suppress all touches within 5 nodes of a suppressed large object detection.
         t42.disthyst = 0;
-        t42.supstrength = 64;
-        t42.supextto = 1;
+        t42.supstrength = 0; 		//Default (0): suppression strength of 128.
+        t42.supextto = 0; 			//Timeout to save power; set to 0 to disable.
+		t42.shapestrength = 0; 		//Default (0): shape suppression strength of 10, range [0, 31].
         t42.maxscrnarea = 0;
         t42.edgesupstrength = 0;
         t42.cfg = 1;
@@ -268,19 +270,23 @@ void maxtouch_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        t46.idlesyncsperx = 40;
-        t46.activesyncsperx = 40;
+        t46.idlesyncsperx = 40;		// 40 ADC samples per X.
+        t46.activesyncsperx = 40;	// 40 ADC samples per X.
+		t46.inrushcfg = 1;			// Set Y-line inrush limit resistors to 1k.
+		
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
         t47.ctrl = 1;                       // Enable stylus detection
-        t47.contmax = 50;                   // The maximum contact diameter of the stylus in 0.1mm increments
+		t47.cfg = T47_CFG_SUPSTY;			// Supress stylus detections when normal touches are present.
+        t47.contmax = 40;                   // The maximum contact diameter of the stylus in 0.1mm increments
         t47.maxtcharea = 100;               // Maximum touch area a contact can have an still be considered a stylus
         t47.stability = 30;                 // Higher values prevent the stylus from dropping out when it gets small
-        t47.confthr = 4;                    // Higher values increase the chances of correctly detecting as stylus, but introduce a delay
+        t47.confthr = 6;                    // Higher values increase the chances of correctly detecting as stylus, but introduce a delay
         t47.amplthr = 60;                   // Any touches smaller than this are classified as stylus touches
+		t47.supstyto = 5;					// Continue to suppress stylus touches until supstyto x 200ms after the last touch is removed.
         t47.hoversup = 200;                 // 255 Disables hover supression
         t47.maxnumsty = 1;                  // Only report a single stylus
         i2c_writeReg16(MXT336UD_ADDRESS, t47_proci_stylus_address, (uint8_t *)&t47, sizeof(mxt_proci_stylus_t47), MXT_I2C_TIMEOUT_MS);
@@ -291,7 +297,7 @@ void maxtouch_init(void) {
     if (t100_multiple_touch_touchscreen_address) {
         mxt_touch_multiscreen_t100 cfg      = {};
 
-        cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE;  // Enable the t100 object, and enable message reporting for the t100 object.1`
+        cfg.ctrl                            = T100_CTRL_RPTEN | T100_CTRL_ENABLE | T100_CTRL_SCANEN;  // Enable the t100 object, and enable message reporting for the t100 object.1. Also enable close scanning mode.
         // TODO: Generic handling of rotation/inversion for absolute mode?
         uint8_t rotation                    = 0;
 #ifdef MXT_INVERT_X
@@ -327,8 +333,8 @@ void maxtouch_init(void) {
         cfg.movsmooth                       = 0;  // The amount of smoothing applied to movements, this tails off at higher speeds
         cfg.movfilter                       = 0;  // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
         // These two fields implement a simple filter for reducing jitter, but large values cause the pointer to stick in place before moving.
-        cfg.movhysti                        = 4;    // Initial movement hysteresis
-        cfg.movhystn                        = 2;    // Next movement hysteresis
+        cfg.movhysti                        = 10;    // Initial movement hysteresis
+        cfg.movhystn                        = 4;    // Next movement hysteresis
 
         cfg.tchdiup                         = 4;    // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
         cfg.tchdidown                       = 2;    // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
