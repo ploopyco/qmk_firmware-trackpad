@@ -103,6 +103,8 @@ static uint16_t t42_proci_touchsupression_address                   = 0;
 static uint16_t t44_message_count_address                           = 0;
 static uint16_t t46_cte_config_address                              = 0;
 static uint16_t t47_proci_stylus_address                            = 0;
+static uint16_t t56_proci_shieldless_address                        = 0;
+static uint16_t t65_proci_lensbending_address                       = 0;
 static uint16_t t80_proci_retransmissioncompensation_address        = 0;
 static uint16_t t100_multiple_touch_touchscreen_address             = 0;
 
@@ -184,6 +186,12 @@ void maxtouch_init(void) {
                     case 47:
                         t47_proci_stylus_address                        = address;
                         break;
+					case 56:
+						t56_proci_shieldless_address					= address;
+						break;
+					case 65:
+						t65_proci_lensbending_address					= address;
+						break;
                     case 80:
                         t80_proci_retransmissioncompensation_address    = address;
                         break;
@@ -343,6 +351,43 @@ void maxtouch_init(void) {
             dprintf("T100 Configuration failed: %d\n", status);
         }
     }
+	
+	// Configure shieldless and lensbending objects to provide some additional resistance
+	// against bad behaviour.
+	if (t56_proci_shieldless_address) {
+        mxt_proci_shieldless_t56 t56 = {};
+        t56.ctrl = T56_CTRL_ENABLE;
+		//t56.optint = 0;
+		//t56.inttime = 0;
+		//t56.intdelay[41];
+        i2c_writeReg16(MXT336UD_ADDRESS, t56_proci_shieldless_address, (uint8_t *)&t56, sizeof(mxt_proci_shieldless_t56), MXT_I2C_TIMEOUT_MS);
+    }
+	if (t65_proci_lensbending_address) {
+        mxt_proci_lensbending_t65 t65 = {};
+        t65.ctrl = T65_CTRL_ENABLE;
+		//t65.ylonoisemul_lsb;
+		//t65.ylonoisemul_msb;
+		//t65.ylonoisediv_lsb;
+		//t65.ylonoisediv_msb;
+		//t65.yhinoisemul_lsb;
+		//t65.yhinoisemul_msb;
+		//t65.yhinoisediv_lsb;
+		//t65.yhinoisediv_msb;
+		//t65.lpfiltcoef;
+		//t65.forcescale_lsb;
+		//t65.forcescale_msb;
+		//t65.forcethr;
+		//t65.forcethrhyst;
+		//t65.forcedi;
+		//t65.forcehyst;
+		//t65.atchratio;
+		//t65.reserved[2];
+		//t65.exfrcthr;
+		//t65.exfrcthrhyst;
+		//t65.exfrcto;
+        i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
+    }
+	
 }
 
 #define T37_PAYLOAD 130
