@@ -12,8 +12,6 @@
     #include "raw_hid.h"
 #endif
 
-#define DIVIDE_UNSIGNED_ROUND(numerator, denominator) (((numerator) + ((denominator) / 2)) / (denominator))
-#define CPI_TO_SAMPLES(cpi, dist_in_mm) (DIVIDE_UNSIGNED_ROUND((cpi) * (dist_in_mm) * 10, 254))
 #define SWAP_BYTES(a) ((a << 8) | (a >> 8))
 
 // By default we assume all available X and Y pins are in use, but a designer
@@ -45,10 +43,6 @@
 #endif
 #ifndef MXT_TAP_AND_HOLD_DISTANCE
 #   define MXT_TAP_AND_HOLD_DISTANCE 5
-#endif
-
-#ifndef MXT_CPI
-    #define MXT_CPI 400
 #endif
 
 #ifndef MXT_RECALIBRATE_AFTER
@@ -339,8 +333,8 @@ void maxtouch_init(void) {
         cfg.tchdiup                         = 4;    // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
         cfg.tchdidown                       = 2;    // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
         cfg.nexttchdi                       = 2;
-        cfg.xrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_WIDTH_MM);     // CPI handling, adjust the reported resolution
-        cfg.yrange                          = CPI_TO_SAMPLES(MXT_CPI, MXT_SENSOR_HEIGHT_MM);    // CPI handling, adjust the reported resolution
+        cfg.xrange                          = DIGITIZER_RESOLUTION_X;   // The logical and physical resolution is reported in our USB descriptor
+        cfg.yrange                          = DIGITIZER_RESOLUTION_Y;   // the host uses this to set the speed of the pointer.
         cfg.cfg2                            = 2;
 
         i2c_status_t status                 = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
