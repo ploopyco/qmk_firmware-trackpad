@@ -186,12 +186,12 @@ void maxtouch_init(void) {
                     case 47:
                         t47_proci_stylus_address                        = address;
                         break;
-					case 56:
-						t56_proci_shieldless_address					= address;
-						break;
-					case 65:
-						t65_proci_lensbending_address					= address;
-						break;
+                    case 56:
+                        t56_proci_shieldless_address                    = address;
+                        break;
+                    case 65:
+                        t65_proci_lensbending_address                    = address;
+                        break;
                     case 80:
                         t80_proci_retransmissioncompensation_address    = address;
                         break;
@@ -253,16 +253,16 @@ void maxtouch_init(void) {
     if (t42_proci_touchsupression_address) {
 
         mxt_proci_touchsupression_t42 t42 = {};
-		
+
         t42.ctrl = T42_CTRL_ENABLE | T42_CTRL_SHAPEEN;
-        t42.maxapprarea = 0; 		//Default (0): suppress any touch that approaches >40 channels.
-        t42.maxtcharea = 0; 		//Default (0): suppress any touch that covers >35 channels.
-        t42.maxnumtchs = 6; 		//Suppress all touches if >6 are detected.
-        t42.supdist = 0; 			//Default (0): Suppress all touches within 5 nodes of a suppressed large object detection.
+        t42.maxapprarea = 0;         //Default (0): suppress any touch that approaches >40 channels.
+        t42.maxtcharea = 0;         //Default (0): suppress any touch that covers >35 channels.
+        t42.maxnumtchs = 6;         //Suppress all touches if >6 are detected.
+        t42.supdist = 0;             //Default (0): Suppress all touches within 5 nodes of a suppressed large object detection.
         t42.disthyst = 0;
-        t42.supstrength = 0; 		//Default (0): suppression strength of 128.
-        t42.supextto = 0; 			//Timeout to save power; set to 0 to disable.
-		t42.shapestrength = 0; 		//Default (0): shape suppression strength of 10, range [0, 31].
+        t42.supstrength = 0;         //Default (0): suppression strength of 128.
+        t42.supextto = 0;             //Timeout to save power; set to 0 to disable.
+        t42.shapestrength = 0;         //Default (0): shape suppression strength of 10, range [0, 31].
         t42.maxscrnarea = 0;
         t42.edgesupstrength = 0;
         t42.cfg = 1;
@@ -272,23 +272,23 @@ void maxtouch_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        t46.idlesyncsperx = 40;		// 40 ADC samples per X.
-        t46.activesyncsperx = 40;	// 40 ADC samples per X.
-		t46.inrushcfg = 1;			// Set Y-line inrush limit resistors to 1k.
-		
+        t46.idlesyncsperx = 40;        // 40 ADC samples per X.
+        t46.activesyncsperx = 40;    // 40 ADC samples per X.
+        t46.inrushcfg = 1;            // Set Y-line inrush limit resistors to 1k.
+
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
         t47.ctrl = 1;                       // Enable stylus detection
-		t47.cfg = T47_CFG_SUPSTY;			// Supress stylus detections when normal touches are present.
+        t47.cfg = T47_CFG_SUPSTY;            // Supress stylus detections when normal touches are present.
         t47.contmax = 40;                   // The maximum contact diameter of the stylus in 0.1mm increments
         t47.maxtcharea = 100;               // Maximum touch area a contact can have an still be considered a stylus
         t47.stability = 30;                 // Higher values prevent the stylus from dropping out when it gets small
         t47.confthr = 6;                    // Higher values increase the chances of correctly detecting as stylus, but introduce a delay
         t47.amplthr = 60;                   // Any touches smaller than this are classified as stylus touches
-		t47.supstyto = 5;					// Continue to suppress stylus touches until supstyto x 200ms after the last touch is removed.
+        t47.supstyto = 5;                    // Continue to suppress stylus touches until supstyto x 200ms after the last touch is removed.
         t47.hoversup = 200;                 // 255 Disables hover supression
         t47.maxnumsty = 1;                  // Only report a single stylus
         i2c_writeReg16(MXT336UD_ADDRESS, t47_proci_stylus_address, (uint8_t *)&t47, sizeof(mxt_proci_stylus_t47), MXT_I2C_TIMEOUT_MS);
@@ -351,86 +351,21 @@ void maxtouch_init(void) {
             dprintf("T100 Configuration failed: %d\n", status);
         }
     }
-	
-	// Configure shieldless and lensbending objects to provide some additional resistance
-	// against bad behaviour.
-	if (t56_proci_shieldless_address) {
+
+    // Configure shieldless and lensbending objects to provide some additional resistance
+    // against bad behaviour.
+    if (t56_proci_shieldless_address) {
         mxt_proci_shieldless_t56 t56 = {};
         t56.ctrl = T56_CTRL_ENABLE;
-		//t56.optint = 0;
-		//t56.inttime = 0;
-		//t56.intdelay[41];
         i2c_writeReg16(MXT336UD_ADDRESS, t56_proci_shieldless_address, (uint8_t *)&t56, sizeof(mxt_proci_shieldless_t56), MXT_I2C_TIMEOUT_MS);
     }
-	if (t65_proci_lensbending_address) {
+    if (t65_proci_lensbending_address) {
         mxt_proci_lensbending_t65 t65 = {};
         t65.ctrl = T65_CTRL_ENABLE;
-		//t65.ylonoisemul_lsb;
-		//t65.ylonoisemul_msb;
-		//t65.ylonoisediv_lsb;
-		//t65.ylonoisediv_msb;
-		//t65.yhinoisemul_lsb;
-		//t65.yhinoisemul_msb;
-		//t65.yhinoisediv_lsb;
-		//t65.yhinoisediv_msb;
-		//t65.lpfiltcoef;
-		//t65.forcescale_lsb;
-		//t65.forcescale_msb;
-		//t65.forcethr;
-		//t65.forcethrhyst;
-		//t65.forcedi;
-		//t65.forcehyst;
-		//t65.atchratio;
-		//t65.reserved[2];
-		//t65.exfrcthr;
-		//t65.exfrcthrhyst;
-		//t65.exfrcto;
         i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
     }
-	
 }
 
-#define T37_PAYLOAD 130
-static uint8_t t37_data[T37_PAYLOAD] = {};
-
-void maxtouch_t37_set_mode(uint8_t mode) {
-    if (t6_command_processor_address && t37_diagnostic_debug_address) {
-        // Set the new mode
-        mxt_gen_commandprocessor_t6 t6 = {};
-        t6.diagnostic = mode;
-        i2c_writeReg16(MXT336UD_ADDRESS, t6_command_processor_address, (uint8_t *)&t6, sizeof(mxt_gen_commandprocessor_t6), MXT_I2C_TIMEOUT_MS);
-    }
-}
-
-void maxtouch_dump_t37_read_page(void) {
-    if (t6_command_processor_address && t37_diagnostic_debug_address) {
-        // Read page
-        i2c_readReg16(MXT336UD_ADDRESS, t37_diagnostic_debug_address,
-            t37_data, T37_PAYLOAD, MXT_I2C_TIMEOUT_MS);
-        // Increment page
-        mxt_gen_commandprocessor_t6 t6 = {};
-        t6.diagnostic = T6_DIAGNOSTIC_PAGE_UP;
-        i2c_writeReg16(MXT336UD_ADDRESS, t6_command_processor_address, (uint8_t *)&t6, sizeof(mxt_gen_commandprocessor_t6), MXT_I2C_TIMEOUT_MS);
-    }
-}
-
-void maxtouch_dump_t37_line(uint8_t line) {
-    int idx = 2 + 32 * line;
-    for (int j=0; j<32; j++) {
-        uprintf("%02x ", t37_data[idx++]);
-    }
-    uprintf("\n");
-}
-
-void maxtouch_dump_t37_page(void) {
-    int idx = 2;
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<32; j++) {
-            uprintf("%02x ", t37_data[idx++]);
-        }
-        uprintf("\n");
-    }
-}
 
 // Store state different from report so we can report MXT_DOWNUP as MXT_DOWN, but remember we are MXT_UP
 digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
