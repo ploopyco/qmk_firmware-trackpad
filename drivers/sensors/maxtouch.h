@@ -217,50 +217,48 @@ typedef struct PACKED {
     unsigned char movhistcfg;
 } mxt_proci_stylus_t47;
 
-
 static const unsigned char T56_CTRL_ENABLE = 0x01;
 static const unsigned char T56_CTRL_RPTEN = 0x02;
 
 typedef struct PACKED {
-	unsigned char ctrl;
-	unsigned char reserved;
-	unsigned char optint;
-	unsigned char inttime;
-	unsigned char intdelay[41];
+    unsigned char ctrl;
+    unsigned char reserved;
+    unsigned char optint;
+    unsigned char inttime;
+    unsigned char intdelay[41];
 } mxt_proci_shieldless_t56;
-	
+
 static const unsigned char T65_CTRL_ENABLE = 0x01;
 static const unsigned char T65_CTRL_RPTEN = 0x02;
 static const unsigned char T65_CTRL_DISPRESS = 0x08;
 static const unsigned char T65_CTRL_DISRELEASE = 0x10;
 static const unsigned char T65_CTRL_DISHIST = 0x80;
-
 static const unsigned char T65_ATCHRATIO_ATCHRATIO = 0x01;
 static const unsigned char T65_ATCHRATIO_DSRATIO = 0x10;
 
 typedef struct PACKED {
-	unsigned char ctrl;
-	unsigned char gradthr;
-	unsigned char ylonoisemul_lsb;
-	unsigned char ylonoisemul_msb;
-	unsigned char ylonoisediv_lsb;
-	unsigned char ylonoisediv_msb;
-	unsigned char yhinoisemul_lsb;
-	unsigned char yhinoisemul_msb;
-	unsigned char yhinoisediv_lsb;
-	unsigned char yhinoisediv_msb;
-	unsigned char lpfiltcoef;
-	unsigned char forcescale_lsb;
-	unsigned char forcescale_msb;
-	unsigned char forcethr;
-	unsigned char forcethrhyst;
-	unsigned char forcedi;
-	unsigned char forcehyst;
-	unsigned char atchratio;
-	unsigned char reserved[2];
-	unsigned char exfrcthr;
-	unsigned char exfrcthrhyst;
-	unsigned char exfrcto;
+    unsigned char ctrl;
+    unsigned char gradthr;
+    unsigned char ylonoisemul_lsb;
+    unsigned char ylonoisemul_msb;
+    unsigned char ylonoisediv_lsb;
+    unsigned char ylonoisediv_msb;
+    unsigned char yhinoisemul_lsb;
+    unsigned char yhinoisemul_msb;
+    unsigned char yhinoisediv_lsb;
+    unsigned char yhinoisediv_msb;
+    unsigned char lpfiltcoef;
+    unsigned char forcescale_lsb;
+    unsigned char forcescale_msb;
+    unsigned char forcethr;
+    unsigned char forcethrhyst;
+    unsigned char forcedi;
+    unsigned char forcehyst;
+    unsigned char atchratio;
+    unsigned char reserved[2];
+    unsigned char exfrcthr;
+    unsigned char exfrcthrhyst;
+    unsigned char exfrcto;
 } mxt_proci_lensbending_t65;
 
 typedef struct PACKED {
@@ -351,7 +349,7 @@ static const unsigned char T100_CTRL_SCANEN = 0x80;
 static const unsigned char T100_CTRL_DISSCRMSG0 = 0x4;
 static const unsigned char T100_CTRL_RPTEN = 0x2;
 static const unsigned char T100_CTRL_ENABLE = 0x1;
- 
+
 static const unsigned char T100_CFG_INVERTX= 0x80;
 static const unsigned char T100_CFG_INVERTY = 0x40;
 static const unsigned char T100_CFG_SWITCHXY = 0x20;
