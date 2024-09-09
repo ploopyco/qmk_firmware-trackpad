@@ -341,8 +341,13 @@ void maxtouch_init(void) {
         cfg.tchdiup                         = 4;    // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
         cfg.tchdidown                       = 2;    // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
         cfg.nexttchdi                       = 2;
+#ifdef MXT_SWITCH_XY
+        cfg.xrange                          = DIGITIZER_RESOLUTION_Y;   // The logical and physical resolution is reported in our USB descriptor
+        cfg.yrange                          = DIGITIZER_RESOLUTION_X;   // the host uses this to set the speed of the pointer.
+#else
         cfg.xrange                          = DIGITIZER_RESOLUTION_X;   // The logical and physical resolution is reported in our USB descriptor
         cfg.yrange                          = DIGITIZER_RESOLUTION_Y;   // the host uses this to set the speed of the pointer.
+#endif
         cfg.cfg2                            = 2;
 
         i2c_status_t status                 = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address,
