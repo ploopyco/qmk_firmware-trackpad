@@ -293,6 +293,16 @@ void maxtouch_init(void) {
         t47.maxnumsty = 1;                  // Only report a single stylus
         i2c_writeReg16(MXT336UD_ADDRESS, t47_proci_stylus_address, (uint8_t *)&t47, sizeof(mxt_proci_stylus_t47), MXT_I2C_TIMEOUT_MS);
     }
+	
+	if (t80_proci_retransmissioncompensation_address) {
+		mxt_proci_retransmissioncompensation_t80 t80 = {};
+		t80.ctrl = 1;
+		t80.compgain = 5;
+		t80.targetdelta = 125;
+		t80.compthr = 60;
+		i2c_writeReg16(MXT336UD_ADDRESS, t80_proci_retransmissioncompensation_address, (uint8_t *)&t80, sizeof(mxt_proci_retransmissioncompensation_t80), MXT_I2C_TIMEOUT_MS);
+	}
+	
 #endif
 
     // Multiple touch touchscreen confguration - defines an area of the sensor to use as a trackpad/touchscreen. This object generates all our interesting report messages.
@@ -367,6 +377,7 @@ void maxtouch_init(void) {
     if (t65_proci_lensbending_address) {
         mxt_proci_lensbending_t65 t65 = {};
         t65.ctrl = T65_CTRL_ENABLE;
+		t65.lpfiltcoef = 10; //default (0): 5, range 1 to 15.
         i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
     }
 }
