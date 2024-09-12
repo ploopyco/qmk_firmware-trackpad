@@ -98,6 +98,7 @@ static uint16_t t6_command_processor_address                        = 0;
 static uint16_t t6_command_processor_report_id                      = 0;
 static uint16_t t7_powerconfig_address                              = 0;
 static uint16_t t8_acquisitionconfig_address                        = 0;
+static uint16_t t25_self_test_address                               = 0;
 static uint16_t t37_diagnostic_debug_address                        = 0;
 static uint16_t t42_proci_touchsupression_address                   = 0;
 static uint16_t t44_message_count_address                           = 0;
@@ -111,6 +112,7 @@ static uint16_t t100_multiple_touch_touchscreen_address             = 0;
 // The object table also contains report_ids. These are used to identify which object generated a
 // message. Again we must lookup these values rather than using hard coded values.
 // Most messages are ignored, we basically just want the messages from the t100 object for now.
+static uint16_t t25_self_test_report_id                             = 0;
 static uint16_t t100_first_report_id                                = 0;
 static uint16_t t100_second_report_id                               = 0;
 static uint16_t t100_subsequent_report_ids[DIGITIZER_CONTACT_COUNT] = {};
@@ -170,6 +172,10 @@ void maxtouch_init(void) {
                         break;
                     case 8:
                         t8_acquisitionconfig_address                    = address;
+                        break;
+                    case 25:
+                        t25_self_test_address                           = address;
+                        t25_self_test_report_id                         = report_id;
                         break;
                     case 37:
                         t37_diagnostic_debug_address                    = address;
@@ -377,9 +383,25 @@ void maxtouch_init(void) {
     if (t65_proci_lensbending_address) {
         mxt_proci_lensbending_t65 t65 = {};
         t65.ctrl = T65_CTRL_ENABLE;
-		t65.lpfiltcoef = 10; //default (0): 5, range 1 to 15.
+        t65.lpfiltcoef = 10; //default (0): 5, range 1 to 15.
         i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
     }
+
+    // Run all self tests
+    if (t25_self_test_address) {
+        mxt_spt_selftest_t25 t25 = {};
+        t25.ctrl = 0x3;
+        t25.cmd = 0xfe;
+        t25.losiglim_msb = 0x44; // 17500
+        t25.losiglim_lsb = 0x5c;
+        t25.upsiglim_msb = 0x79; // 31000
+        t25.upsiglim_lsb = 0x18;
+
+        t25.sesiglimits[1] = MXT_GAIN;
+        t25.sesiglimits[2] = MXT_DX_GAIN;
+
+        i2c_writeReg16(MXT336UD_ADDRESS, t25_self_test_address, (uint8_t *)&t25, sizeof(mxt_spt_selftest_t25), MXT_I2C_TIMEOUT_MS);
+     }
 }
 
 
@@ -413,6 +435,10 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                             digitizer_report.contacts[j].type = UNKNOWN;
                         }
                     }
+                }
+                else if (message.report_id == t25_self_test_report_id) {
+                    uprintf("Self test results: %02x %02x %02x %02x %02x %02x\n", message.data[0], message.data[1], message.data[2],
+                                                                                  message.data[3], message.data[4], message.data[5]);
                 }
                 else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
                          (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
@@ -468,7 +494,8 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
 
                 }
                 else {
-                    uprintf("Unhandled event %d\n", message.report_id);
+                    uprintf("Unhandled event %d (%02x %02x %02x %02x %02x %02x) %d\n", message.report_id, message.data[0], message.data[1], message.data[2], message.data[3],
+                         message.data[4], message.data[5], t25_self_test_report_id);
                 }
             }
         }
