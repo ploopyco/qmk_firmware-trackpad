@@ -138,6 +138,25 @@ static const unsigned char T42_CFG_SUPTCHRPTEN = 0x04;
 
 typedef struct PACKED {
     unsigned char ctrl;
+    unsigned char cmd;
+    unsigned char upsiglim_lsb;
+    unsigned char upsiglim_msb;
+    unsigned char losiglim_lsb;
+    unsigned char losiglim_msb;
+    unsigned char pindwellus;
+    unsigned char sigrangelim_lsb;
+    unsigned char sigrangelim_msb;
+    unsigned char pinthr;
+    unsigned char pertstinterval;
+    unsigned char pertstholdoff;
+    unsigned char pertstrptfactor;
+    unsigned char pertstrtpwidth;
+    unsigned char pertstcfg;
+    unsigned char sesiglimits[3];
+} mxt_spt_selftest_t25;
+
+typedef struct PACKED {
+    unsigned char ctrl;
     unsigned char reserved;
     unsigned char maxapprarea;
     unsigned char maxtcharea;
