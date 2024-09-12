@@ -386,22 +386,6 @@ void maxtouch_init(void) {
         t65.lpfiltcoef = 10; //default (0): 5, range 1 to 15.
         i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
     }
-
-    // Run all self tests
-    if (t25_self_test_address) {
-        mxt_spt_selftest_t25 t25 = {};
-        t25.ctrl = 0x3;
-        t25.cmd = 0xfe;
-        t25.losiglim_msb = 0x44; // 17500
-        t25.losiglim_lsb = 0x5c;
-        t25.upsiglim_msb = 0x79; // 31000
-        t25.upsiglim_lsb = 0x18;
-
-        t25.sesiglimits[1] = MXT_GAIN;
-        t25.sesiglimits[2] = MXT_DX_GAIN;
-
-        i2c_writeReg16(MXT336UD_ADDRESS, t25_self_test_address, (uint8_t *)&t25, sizeof(mxt_spt_selftest_t25), MXT_I2C_TIMEOUT_MS);
-     }
 }
 
 
@@ -437,8 +421,14 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                     }
                 }
                 else if (message.report_id == t25_self_test_report_id) {
-                    uprintf("Self test results: %02x %02x %02x %02x %02x %02x\n", message.data[0], message.data[1], message.data[2],
-                                                                                  message.data[3], message.data[4], message.data[5]);
+                    const uint8_t result = message.data[0];
+                    switch (result) {
+                        case T25_TEST_PASSED: uprintf("Self Tests passed\n"); break;
+                        case T25_TEST_INVALID: uprintf("Invalid self test command\n"); break;
+                        case T25_TEST_POWER: uprintf("Power fault detected\n"); break;
+                        case T25_TEST_PIN_FAULT: uprintf("Pin fault detected. Seq %d, pin %dx%d\n", message.data[2], message.data[3], message.data[4]); break;
+                        case T25_TEST_SIGNAL_LIMIT: uprintf("Signal limit fault detected\n"); break;
+                    }
                 }
                 else if ((message.report_id >= t100_subsequent_report_ids[0]) &&
                          (message.report_id <= t100_subsequent_report_ids[t100_num_reports-1])) {
@@ -491,7 +481,28 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                     uprintf("T6 status: RESET: %d, OFL: %d. SIGERR: %d, CAL: %d, CFGERR: %d. COMSERR: %d\n",
                         status & (1 << 7) ? 1 : 0, status & (1 << 6) ? 1 : 0, status & (1 << 5) ? 1 : 0,
                         status & (1 << 4) ? 1 : 0, status & (1 << 3) ? 1 : 0, status & (1 << 2) ? 1 : 0);
+                    // Run all self tests after a reset
+                    if (t25_self_test_address && status & (1 << 7)) {
+                        mxt_spt_selftest_t25 t25 = {};
+                        t25.ctrl = 0x3;
+                        t25.cmd = T25_TEST_ALL;
 
+                        // Min/Max values from the 1066u datasheet
+                        t25.losiglim_msb = 0x44; // 17500
+                        t25.losiglim_lsb = 0x5c;
+                        t25.upsiglim_msb = 0x79; // 31000
+                        t25.upsiglim_lsb = 0x18;
+
+                        // Observed reference signal is approx 6000, and we get
+                        // a 700 delta when touching. So create a range of 7000.
+                        t25.sigrangelim_lsb = 0x58;
+                        t25.sigrangelim_msb = 0x1B;
+
+                        t25.sesiglimits[1] = MXT_GAIN;
+                        t25.sesiglimits[2] = MXT_DX_GAIN;
+
+                        i2c_writeReg16(MXT336UD_ADDRESS, t25_self_test_address, (uint8_t *)&t25, sizeof(mxt_spt_selftest_t25), MXT_I2C_TIMEOUT_MS);
+                    }
                 }
                 else {
                     uprintf("Unhandled event %d (%02x %02x %02x %02x %02x %02x) %d\n", message.report_id, message.data[0], message.data[1], message.data[2], message.data[3],
