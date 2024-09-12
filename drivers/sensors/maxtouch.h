@@ -155,6 +155,15 @@ typedef struct PACKED {
     unsigned char sesiglimits[3];
 } mxt_spt_selftest_t25;
 
+static const unsigned char T25_TEST_FINISHED = 0x00;
+static const unsigned char T25_TEST_POWER = 0x01;
+static const unsigned char T25_TEST_PIN_FAULT = 0x12;
+static const unsigned char T25_TEST_SIGNAL_LIMIT = 0x17;
+static const unsigned char T25_TEST_ALL = 0xFE;
+
+static const unsigned char T25_TEST_INVALID = 0xFD;
+static const unsigned char T25_TEST_PASSED = 0xFE;
+
 typedef struct PACKED {
     unsigned char ctrl;
     unsigned char reserved;
