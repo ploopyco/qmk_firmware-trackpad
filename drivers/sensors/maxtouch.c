@@ -280,7 +280,7 @@ void maxtouch_init(void) {
         mxt_spt_cteconfig_t46 t46 = {};
         t46.idlesyncsperx = 40;        // 40 ADC samples per X.
         t46.activesyncsperx = 40;    // 40 ADC samples per X.
-        t46.inrushcfg = 1;            // Set Y-line inrush limit resistors to 1k.
+        t46.inrushcfg = 0;            // Set Y-line inrush limit resistors to 1k.
 
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
@@ -345,9 +345,9 @@ void maxtouch_init(void) {
         cfg.tchhyst                         = MXT_TOUCH_HYST;
         cfg.intthr                          = MXT_INTERNAL_TOUCH_THRESHOLD;
         cfg.intthryst                       = MXT_INTERNAL_TOUCH_HYST;
-        cfg.mrgthr                          = 2;    // Merge threshold
-        cfg.mrghyst                         = 1;    // Merge threshold hysteresis
-        cfg.mrgthradjstr                    = 4;
+        cfg.mrgthr                          = 5;    // Merge threshold
+        cfg.mrghyst                         = 10;    // Merge threshold hysteresis
+        cfg.mrgthradjstr                    = 20;
         cfg.movsmooth                       = 0;  // The amount of smoothing applied to movements, this tails off at higher speeds
         cfg.movfilter                       = 0;  // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
         // These two fields implement a simple filter for reducing jitter, but large values cause the pointer to stick in place before moving.
@@ -378,6 +378,8 @@ void maxtouch_init(void) {
     if (t56_proci_shieldless_address) {
         mxt_proci_shieldless_t56 t56 = {};
         t56.ctrl = T56_CTRL_ENABLE;
+		t56.optint = 1;
+		t56.inttime = 10;
         i2c_writeReg16(MXT336UD_ADDRESS, t56_proci_shieldless_address, (uint8_t *)&t56, sizeof(mxt_proci_shieldless_t56), MXT_I2C_TIMEOUT_MS);
     }
     if (t65_proci_lensbending_address) {
