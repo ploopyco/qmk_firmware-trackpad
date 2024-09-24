@@ -244,6 +244,7 @@ void maxtouch_init(void) {
     // Configure capacitive acquision, currently we use all the default values but it feels like some of this stuff might be important.
     if (t8_acquisitionconfig_address) {
         mxt_gen_acquisitionconfig_t8 t8 = {};
+		t8.chrgtime = 1;
         t8.tchautocal = MXT_RECALIBRATE_AFTER;
         t8.atchcalst = 0;;
 
@@ -278,9 +279,9 @@ void maxtouch_init(void) {
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        t46.idlesyncsperx = 40;        // 40 ADC samples per X.
-        t46.activesyncsperx = 40;    // 40 ADC samples per X.
-        t46.inrushcfg = 0;            // Set Y-line inrush limit resistors to 1k.
+        t46.idlesyncsperx = 90;        // ADC samples per X.
+        t46.activesyncsperx = 90;      // ADC samples per X.
+        t46.inrushcfg = 0;             // Set Y-line inrush limit resistors.
 
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
