@@ -288,7 +288,7 @@ void maxtouch_init(void) {
 
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
-        t47.ctrl = 1;                       // Enable stylus detection
+        t47.ctrl = 0;                       // Enable stylus detection
         t47.cfg = T47_CFG_SUPSTY;            // Supress stylus detections when normal touches are present.
         t47.contmax = 40;                   // The maximum contact diameter of the stylus in 0.1mm increments
         t47.maxtcharea = 100;               // Maximum touch area a contact can have an still be considered a stylus
@@ -358,6 +358,7 @@ void maxtouch_init(void) {
         cfg.tchdiup                         = 4;    // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
         cfg.tchdidown                       = 2;    // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
         cfg.nexttchdi                       = 2;
+		cfg.calcfg							= 0;
 #ifdef MXT_SWITCH_XY
         cfg.xrange                          = DIGITIZER_RESOLUTION_Y;   // The logical and physical resolution is reported in our USB descriptor
         cfg.yrange                          = DIGITIZER_RESOLUTION_X;   // the host uses this to set the speed of the pointer.
