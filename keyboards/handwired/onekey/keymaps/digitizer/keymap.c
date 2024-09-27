@@ -41,6 +41,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 digitizer_t digitizer_task_kb(digitizer_t digitizer_state) {
+    // If the time between events is too great, it is not treated
+    // as a series of taps rather than a continuous movement.
     if (timer_elapsed32(timer) < 10) {
         return digitizer_state;
     }
@@ -58,7 +60,8 @@ digitizer_t digitizer_task_kb(digitizer_t digitizer_state) {
 #endif
     digitizer_state.contacts[0].x = x * DIGITIZER_RESOLUTION_X;
     digitizer_state.contacts[0].y = y * DIGITIZER_RESOLUTION_Y;
-    digitizer_state.contacts[0].amplitude = tip ? 10 : 10;
+    // This will change, but for now small amplitudes are treated as hover events.
+    digitizer_state.contacts[0].amplitude = tip ? 10 : 2;
     digitizer_state.contacts[0].confidence = 1;
 
     return digitizer_state;
