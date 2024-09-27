@@ -259,7 +259,7 @@ typedef struct {
     uint8_t  button1 : 1;
     uint8_t  button2 : 1;
     uint8_t  button3 : 1;
-    uint8_t reserved2 : 1;
+    uint8_t  reserved2 : 1;
 } PACKED report_digitizer_t;
 
 #if JOYSTICK_AXIS_RESOLUTION > 8

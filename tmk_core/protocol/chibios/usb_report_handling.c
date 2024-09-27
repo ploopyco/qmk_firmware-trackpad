@@ -12,7 +12,7 @@
 #include "usb_driver.h"
 #include "report.h"
 
-#define FEATURE_REPORT   0x3
+#define FEATURE_REPORT 0x3
 
 extern usb_endpoint_in_t     usb_endpoints_in[USB_ENDPOINT_IN_COUNT];
 extern usb_endpoint_in_lut_t usb_endpoint_interface_lut[TOTAL_INTERFACES];
@@ -87,10 +87,10 @@ void usb_shared_reset_report(usb_fs_report_t **reports) {
 }
 
 bool usb_get_report_cb(USBDriver *driver) {
-    usb_control_request_t *setup        = (usb_control_request_t *)driver->setup;
-    uint8_t                interface    = setup->wIndex;
-    uint8_t                report_type  = setup->wValue.hbyte;
-    uint8_t                report_id    = setup->wValue.lbyte;
+    usb_control_request_t *setup       = (usb_control_request_t *)driver->setup;
+    uint8_t                interface   = setup->wIndex;
+    uint8_t                report_type = setup->wValue.hbyte;
+    uint8_t                report_id   = setup->wValue.lbyte;
 
     static usb_fs_report_t report;
 
@@ -107,7 +107,7 @@ bool usb_get_report_cb(USBDriver *driver) {
     if (report_type == FEATURE_REPORT) {
 #ifdef DIGITIZER_ENABLE
         if (report_id == REPORT_ID_DIGITIZER_GET_FEATURE) {
-            static const digitizer_feat_t payload = { .report_id = REPORT_ID_DIGITIZER_GET_FEATURE, .contact_count_max = DIGITIZER_CONTACT_COUNT, .pad_type = 2, .surface_switch = 0 };
+            static const digitizer_feat_t payload = {.report_id = REPORT_ID_DIGITIZER_GET_FEATURE, .contact_count_max = DIGITIZER_CONTACT_COUNT, .pad_type = 2, .surface_switch = 0};
             usbSetupTransfer(driver, (uint8_t *)&payload, sizeof(digitizer_feat_t), NULL);
             return true;
         }
@@ -135,8 +135,7 @@ bool usb_get_report_cb(USBDriver *driver) {
         }
 #endif
         return false;
-    }
-    else {
+    } else {
         usb_report_storage_t *report_storage = usb_endpoints_in[ep].report_storage;
 
         if (report_storage == NULL) {

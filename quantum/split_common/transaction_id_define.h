@@ -90,7 +90,6 @@ enum serial_transaction_id {
     GET_DIGITIZER_DATA,
 #endif // defined(DIGITIZER_ENABLE) && defined(SPLIT_DIGITIZER_ENABLE)
 
-
 #if defined(SPLIT_WATCHDOG_ENABLE)
     PUT_WATCHDOG,
 #endif // defined(SPLIT_WATCHDOG_ENABLE)

@@ -25,18 +25,14 @@
  * defgroup digitizer HID Digitizer
  * \{
  */
-typedef enum {
-    UNKNOWN,
-    FINGER,
-    STYLUS
-} digitizer_type_t;
+typedef enum { UNKNOWN, FINGER, STYLUS } digitizer_type_t;
 
 typedef struct {
     digitizer_type_t type;
-    uint8_t amplitude;
-    uint8_t confidence : 1;
-    uint16_t x;
-    uint16_t y;
+    uint8_t          amplitude;
+    uint8_t          confidence : 1;
+    uint16_t         x;
+    uint16_t         y;
 } digitizer_contact_t;
 
 typedef struct {
@@ -44,9 +40,9 @@ typedef struct {
     union {
         uint8_t buttons;
         struct {
-            uint8_t  button1 : 1;
-            uint8_t  button2 : 1;
-            uint8_t  button3 : 1;
+            uint8_t button1 : 1;
+            uint8_t button2 : 1;
+            uint8_t button3 : 1;
         };
     };
 } digitizer_t;
@@ -99,7 +95,7 @@ void digitizer_init(void);
 /**
  * \brief Task processing routine for the digitizer feature. This function polls the digitizer hardware
  * and sends events to the host as required.
- * 
+ *
  * \return true if a new event was sent
  */
 bool digitizer_task(void);
@@ -112,6 +108,6 @@ void digitizer_set_shared_report(digitizer_t report);
 #    if !defined(DIGITIZER_TASK_THROTTLE_MS)
 #        define DIGITIZER_TASK_THROTTLE_MS 1
 #    endif
-#endif     // defined(SPLIT_DIGITIZER_ENABLE)
+#endif // defined(SPLIT_DIGITIZER_ENABLE)
 
 /** \} */

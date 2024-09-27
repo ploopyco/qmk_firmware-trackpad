@@ -73,16 +73,13 @@
 
 #define sizeof_member(type, member) sizeof(((type *)NULL)->member)
 
-#define trans_initiator2target_initializer_cb(member, cb) \
-    { sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), 0, 0, cb }
+#define trans_initiator2target_initializer_cb(member, cb) {sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), 0, 0, cb}
 #define trans_initiator2target_initializer(member) trans_initiator2target_initializer_cb(member, NULL)
 
-#define trans_target2initiator_initializer_cb(member, cb) \
-    { 0, 0, sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), cb }
+#define trans_target2initiator_initializer_cb(member, cb) {0, 0, sizeof_member(split_shared_memory_t, member), offsetof(split_shared_memory_t, member), cb}
 #define trans_target2initiator_initializer(member) trans_target2initiator_initializer_cb(member, NULL)
 
-#define trans_initiator2target_cb(cb) \
-    { 0, 0, 0, 0, cb }
+#define trans_initiator2target_cb(cb) {0, 0, 0, 0, cb}
 
 #define transport_write(id, data, length) transport_execute_transaction(id, data, length, NULL, 0)
 #define transport_read(id, data, length) transport_execute_transaction(id, NULL, 0, data, length)
@@ -826,7 +823,7 @@ static void digitizer_handlers_slave(matrix_row_t master_matrix[], matrix_row_t 
 #    endif
 
     split_slave_digitizer_sync_t digitizer = {};
-    digitizer.report = digitizer_get_report();
+    digitizer.report                       = digitizer_get_report();
 
     // Now update the checksum given that the digitizer report has been written to
     digitizer.checksum = crc8(&digitizer.report, sizeof(digitizer_t));
