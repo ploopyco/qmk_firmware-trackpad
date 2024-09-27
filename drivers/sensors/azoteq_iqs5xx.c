@@ -7,7 +7,7 @@
 #include "wait.h"
 #include "debug.h"
 #ifdef DIGITIZER_ENABLE
-#   include "digitizer.h"
+#    include "digitizer.h"
 #endif
 
 #ifndef AZOTEQ_IQS5XX_ADDRESS
@@ -304,20 +304,19 @@ void azoteq_iqs5xx_setup_resolution(void) {
 #endif
 }
 
-
 #ifdef DIGITIZER_ENABLE
 digitizer_t digitizer_driver_get_report(digitizer_t digitizer_report) {
     azoteq_iqs5xx_digitizer_data_t digitizer_data = {0};
     azoteq_iqs5xx_wake();
 
-    i2c_status_t                           status = i2c_readReg16(AZOTEQ_IQS5XX_ADDRESS, AZOTEQ_IQS5XX_REG_ABSOLUTE_X_POSITION, (uint8_t *)&digitizer_data, sizeof(azoteq_iqs5xx_digitizer_data_t), AZOTEQ_IQS5XX_TIMEOUT_MS);
+    i2c_status_t status = i2c_readReg16(AZOTEQ_IQS5XX_ADDRESS, AZOTEQ_IQS5XX_REG_ABSOLUTE_X_POSITION, (uint8_t *)&digitizer_data, sizeof(azoteq_iqs5xx_digitizer_data_t), AZOTEQ_IQS5XX_TIMEOUT_MS);
     if (status == I2C_STATUS_SUCCESS) {
         for (int i = 0; i < 5; i++) {
             digitizer_report.contacts[i].x = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].x.h, digitizer_data.fingers[i].x.l);
             digitizer_report.contacts[i].y = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].y.h, digitizer_data.fingers[i].y.l);
 
             digitizer_report.contacts[i].confidence = 1;
-            digitizer_report.contacts[i].amplitude =  AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].strength.h, digitizer_data.fingers[i].strength.l);
+            digitizer_report.contacts[i].amplitude  = AZOTEQ_IQS5XX_COMBINE_H_L_BYTES(digitizer_data.fingers[i].strength.h, digitizer_data.fingers[i].strength.l);
         }
         azoteq_iqs5xx_end_session();
     }

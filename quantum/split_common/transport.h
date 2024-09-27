@@ -116,7 +116,7 @@ typedef struct _split_slave_pointing_sync_t {
 #endif // defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
 
 #if defined(DIGITIZER_ENABLE) && defined(SPLIT_DIGITIZER_ENABLE)
-#   include "digitizer.h"
+#    include "digitizer.h"
 typedef struct _split_digitizer_sync_t {
     uint8_t     checksum;
     digitizer_t report;
@@ -222,7 +222,6 @@ typedef struct _split_shared_memory_t {
 #if defined(DIGITIZER_ENABLE) && defined(SPLIT_DIGITIZER_ENABLE)
     split_slave_digitizer_sync_t digitizer;
 #endif // defined(DIGITIZER_ENABLE) && defined(SPLIT_DIGITIZER_ENABLE)
-
 
 #if defined(SPLIT_WATCHDOG_ENABLE)
     bool watchdog_pinged;
