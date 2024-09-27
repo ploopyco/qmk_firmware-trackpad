@@ -105,6 +105,7 @@ bool usb_get_report_cb(USBDriver *driver) {
     }
 
     if (report_type == FEATURE_REPORT) {
+#ifdef DIGITIZER_ENABLE
         if (report_id == REPORT_ID_DIGITIZER_GET_FEATURE) {
             static const digitizer_feat_t payload = { .report_id = REPORT_ID_DIGITIZER_GET_FEATURE, .contact_count_max = DIGITIZER_CONTACT_COUNT, .pad_type = 2, .surface_switch = 0 };
             usbSetupTransfer(driver, (uint8_t *)&payload, sizeof(digitizer_feat_t), NULL);
@@ -132,7 +133,7 @@ bool usb_get_report_cb(USBDriver *driver) {
             usbSetupTransfer(driver, (uint8_t *)cert, sizeof(cert), NULL);
             return true;
         }
-
+#endif
         return false;
     }
     else {

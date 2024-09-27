@@ -290,7 +290,7 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
 #if defined(SHARED_EP_ENABLE) && !defined(KEYBOARD_SHARED_EP)
                             case SHARED_INTERFACE:
 #endif
-
+#ifdef DIGITIZER_ENABLE
                                 // Touchpad set feature reports - TODO: Relocate?
                                 if ((setup->wValue.hbyte == 0x3) && (setup->wValue.lbyte == REPORT_ID_DIGITIZER_CONFIGURATION)) {
                                     // TODO: Disable the touchpad/buttons on demand from the host For now just ACK the message by
@@ -322,6 +322,7 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
                                     usbSetupTransfer(usbp, response, 5, NULL);
                                     return true;
                                 }
+#endif
                                 // LED handling stuff
                                 usbSetupTransfer(usbp, set_report_buf, sizeof(set_report_buf), set_led_transfer_cb);
                                 return true;
