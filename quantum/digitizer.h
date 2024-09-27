@@ -41,9 +41,14 @@ typedef struct {
 
 typedef struct {
     digitizer_contact_t contacts[DIGITIZER_CONTACT_COUNT];
-    uint8_t  button1 : 1;
-    uint8_t  button2 : 1;
-    uint8_t  button3 : 1;
+    union {
+        uint8_t buttons;
+        struct {
+            uint8_t  button1 : 1;
+            uint8_t  button2 : 1;
+            uint8_t  button3 : 1;
+        };
+    };
 } digitizer_t;
 
 /**
