@@ -31,11 +31,25 @@
 #    define DIGITIZER_RESOLUTION_Y  2150
 #    define DIGITIZER_TOUCH_PAD
 #else
+     // No driver
+#    ifndef DIGITIZER_WIDTH_MM
+#        define DIGITIZER_WIDTH_MM 100
+#    endif
+#    ifndef DIGITIZER_HEIGHT_MM
+#        define DIGITIZER_HEIGHT_MM 100
+#    endif
+
+#    ifndef DIGITIZER_RESOLUTION_X
+#       define DIGITIZER_RESOLUTION_X  1920
+#    endif
+#    ifndef DIGITIZER_RESOLUTION_Y
+#       define DIGITIZER_RESOLUTION_Y  1080
+#    endif
+
 #    ifndef DIGITIZER_HAS_STYLUS
 #        define DIGITIZER_HAS_STYLUS true
 #    endif
 #    ifndef DIGITIZER_CONTACT_COUNT
 #        define DIGITIZER_CONTACT_COUNT 1
 #    endif
-#    define DIGITIZER_DRIVER_none
 #endif

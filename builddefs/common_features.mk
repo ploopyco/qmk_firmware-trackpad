@@ -165,7 +165,8 @@ ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
     endif
 endif
 
-VALID_DIGITIZER_DRIVER_TYPES := azoteq_iqs5xx maxtouch custom
+DIGITIZER_DRIVER ?= none
+VALID_DIGITIZER_DRIVER_TYPES := azoteq_iqs5xx maxtouch custom none
 ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
     ifeq ($(strip $(POINTING_DEVICE_ENABLE)), yes)
         # Digitizers can fallback to reporting as a mouse if the host does not support a digitizer.
@@ -179,7 +180,7 @@ ifeq ($(strip $(DIGITIZER_ENABLE)), yes)
     else
         OPT_DEFS += -DDIGITIZER_ENABLE
         SRC += $(QUANTUM_DIR)/digitizer.c
-        ifneq ($(strip $(DIGITIZER_DRIVER)), custom)
+        ifeq ($(filter $(strip $(DIGITIZER_DRIVER)),custom none),)
             SRC += drivers/sensors/$(strip $(DIGITIZER_DRIVER)).c
             OPT_DEFS += -DDIGITIZER_DRIVER_$(strip $(shell echo $(DIGITIZER_DRIVER) | tr '[:lower:]' '[:upper:]'))
         endif
