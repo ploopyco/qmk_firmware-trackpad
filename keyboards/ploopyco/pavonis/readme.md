@@ -13,7 +13,7 @@ Make example for this keyboard (after setting up your build environment):
 
 Flashing example for this keyboard:
 
-    Put the board into bootloader mode by holding the boot button while connecting the USB cable, bolding boot and shorting the reset jumper or holding SW1 and plugging in the USB cable, then drag and drop the uf2 file onto the drive that mounts.
+    Put the board into bootloader mode by holding the boot button while connecting the USB cable, holding boot and shorting the reset jumper or holding SW1 and plugging in the USB cable, then drag and drop the uf2 file onto the drive that mounts.
 
 See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs).
 
