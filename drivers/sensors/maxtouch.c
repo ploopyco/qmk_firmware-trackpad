@@ -1,4 +1,4 @@
-// Copyright 2024 George Norton (@george-norton)
+ // Copyright 2024 George Norton (@george-norton)
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include QMK_KEYBOARD_H
@@ -80,6 +80,14 @@
 
 #ifndef MXT_DX_GAIN
 #    define MXT_DX_GAIN 0
+#endif
+
+#ifndef MXT_X_PITCH
+#    define MXT_X_PITCH (MXT_SENSOR_WIDTH_MM * 10 / MXT_MATRIX_X_SIZE)
+#endif
+
+#ifndef MXT_Y_PITCH
+#    define MXT_Y_PITCH (MXT_SENSOR_HEIGHT_MM * 10 / MXT_MATRIX_Y_SIZE)
 #endif
 
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
@@ -322,8 +330,8 @@ void maxtouch_init(void) {
         cfg.numtch       = DIGITIZER_CONTACT_COUNT;                         // The number of touch reports we want to receive (upto 10)
         cfg.xsize        = MXT_MATRIX_X_SIZE;                               // Make configurable as this depends on the sensor design.
         cfg.ysize        = MXT_MATRIX_Y_SIZE;                               // Make configurable as this depends on the sensor design.
-        cfg.xpitch       = (MXT_SENSOR_WIDTH_MM * 10 / MXT_MATRIX_X_SIZE);  // Pitch between X-Lines in 0.1mm increments.
-        cfg.ypitch       = (MXT_SENSOR_HEIGHT_MM * 10 / MXT_MATRIX_Y_SIZE); // Pitch between Y-Lines in 0.1mm increments.
+        cfg.xpitch       = MXT_X_PITCH;                                     // Pitch between X-Lines in 0.1mm increments.
+        cfg.ypitch       = MXT_Y_PITCH;                                     // Pitch between Y-Lines in 0.1mm increments.
         cfg.xedgecfg     = 9;
         cfg.xedgedist    = 10;
         cfg.yedgecfg     = 9;
