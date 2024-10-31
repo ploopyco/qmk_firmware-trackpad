@@ -24,6 +24,9 @@
 #ifdef MOUSEKEY_ENABLE
 #    include "mousekey.h"
 #endif
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
+#    include "pointing_device.h"
+#endif
 
 #ifdef DIGITIZER_MOTION_PIN
 #    undef DIGITIZER_TASK_THROTTLE_MS
@@ -70,6 +73,17 @@ typedef struct {
 
 bool digitizer_send_mouse_reports = true;
 static report_mouse_t mouse_report = {};
+
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
+report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report);
+
+const pointing_device_driver_t digitizer_pointing_device_driver = {
+    .init       = NULL,
+    .get_report = digitizer_get_mouse_report,
+    .get_cpi    = NULL,
+    .set_cpi    = NULL
+};
+#endif
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
 #include "drivers/sensors/azoteq_iqs5xx.h"
@@ -446,7 +460,8 @@ bool digitizer_task(void) {
 #if defined(MOUSEKEY_ENABLE) && !defined(POINTING_DEVICE_ENABLE)
         // Pointing device has a more fully featured mousekeys implementation,
         // so we prefer it if pointing device is enabled.
-        const report_mouse_t mousekey_report = mousekey_get_report();
+        
+        const report_mouse_t mousekey_report = mousekey_get_report();a 
         new_state.buttons |= mousekey_report.buttons;
 #endif
         // Handle user modification of stylus state.
