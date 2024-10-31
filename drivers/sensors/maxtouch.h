@@ -7,17 +7,6 @@
 #define MXT_I2C_TIMEOUT_MS 20
 #define MXT_REG_INFORMATION_BLOCK (0)
 
-// TODO: These are peacock specific, they are used for handling CPI calculations. Is there a better default?
-#ifndef MXT_SENSOR_WIDTH_MM
-#    error "You must define the MXT_SENSOR_WIDTH_MM"
-#    define MXT_SENSOR_WIDTH_MM 91
-#endif
-
-#ifndef MXT_SENSOR_HEIGHT_MM
-#    error "You must define the MXT_SENSOR_HEIGHT_MM"
-#    define MXT_SENSOR_HEIGHT_MM 156
-#endif
-
 // Object table entries cannot be read individually, we have to read starting at the
 // beginning of an object. For now we will allocate a large object on the stack, but
 // a general purpose I2C buffer might be a better approach if other interesting objects

@@ -16,6 +16,7 @@
 #    define DIGITIZER_RESOLUTION_Y AZOTEQ_IQS5XX_RESOLUTION_Y
 #    define DIGITIZER_TOUCH_PAD
 #elif defined(DIGITIZER_DRIVER_maxtouch)
+#    include "drivers/sensors/procyon.h"
 #    ifndef DIGITIZER_CONTACT_COUNT
 #        define DIGITIZER_CONTACT_COUNT 5
 #    endif
@@ -26,9 +27,13 @@
 #        define DIGITIZER_WIDTH_MM MXT_SENSOR_WIDTH_MM
 #        define DIGITIZER_HEIGHT_MM MXT_SENSOR_HEIGHT_MM
 #    endif
-// TODO: Magic numbers
-#    define DIGITIZER_RESOLUTION_X 3685
-#    define DIGITIZER_RESOLUTION_Y 2150
+#    ifndef DIGITIZER_RESOLUTION_X
+#        define DIGITIZER_RESOLUTION_X (DIGITIZER_WIDTH_MM*200)
+
+#    endif
+#    ifndef DIGITIZER_RESOLUTION_Y
+#         define DIGITIZER_RESOLUTION_Y (DIGITIZER_HEIGHT_MM*200)
+#    endif
 #    define DIGITIZER_TOUCH_PAD
 #else
 // No driver

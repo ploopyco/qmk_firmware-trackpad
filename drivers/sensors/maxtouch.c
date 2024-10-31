@@ -14,6 +14,15 @@
 
 #define SWAP_BYTES(a) ((a << 8) | (a >> 8))
 
+// Mandatory configuration. These are hardware specific.
+#ifndef MXT_SENSOR_WIDTH_MM
+#    error "You must define the MXT_SENSOR_WIDTH_MM"
+#endif
+
+#ifndef MXT_SENSOR_HEIGHT_MM
+#    error "You must define the MXT_SENSOR_HEIGHT_MM"
+#endif
+
 // By default we assume all available X and Y pins are in use, but a designer
 // may decide to leave some pins unconnected, so the size can be overridden here.
 #ifndef MXT_MATRIX_X_SIZE
@@ -49,37 +58,22 @@
 #    define MXT_RECALIBRATE_AFTER 50
 #endif
 
-#ifndef MXT_SURFACE_TYPE
-#    define MXT_SURFACE_TYPE VINYL
+#ifndef MXT_TOUCH_THRESHOLD
+#    define MXT_TOUCH_THRESHOLD 18
 #endif
 
-#define VINYL 1
-#define ACRYLIC 2
-
-#if MXT_SURFACE_TYPE == VINYL
-#    ifndef MXT_TOUCH_THRESHOLD
-#        define MXT_TOUCH_THRESHOLD 18
-#    endif
-#    ifndef MXT_GAIN
-#        define MXT_GAIN 4
-#    endif
-#elif MXT_SURFACE_TYPE == ACRYLIC
-#    ifndef MXT_TOUCH_THRESHOLD
-#        define MXT_TOUCH_THRESHOLD 12
-#    endif
-#    ifndef MXT_GAIN
-#        define MXT_GAIN 5
-#    endif
-#else
-#    error "Unknown surface type."
+#ifndef MXT_GAIN
+#    define MXT_GAIN 4
 #endif
 
 #ifndef MXT_TOUCH_HYST
 #    define MXT_TOUCH_HYST 0
 #endif
+
 #ifndef MXT_INTERNAL_TOUCH_HYST
 #    define MXT_INTERNAL_TOUCH_HYST 0
 #endif
+
 #ifndef MXT_INTERNAL_TOUCH_THRESHOLD
 #    define MXT_INTERNAL_TOUCH_THRESHOLD 0
 #endif
