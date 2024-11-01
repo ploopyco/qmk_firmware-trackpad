@@ -90,6 +90,46 @@
 #    define MXT_Y_PITCH (MXT_SENSOR_HEIGHT_MM * 10 / MXT_MATRIX_Y_SIZE)
 #endif
 
+#ifndef MXT_MESALLOW
+#    define MXT_MESALLOW 3
+#endif
+
+#ifndef MXT_IDLE_SYNCS_PER_X
+#    define MXT_IDLE_SYNCS_PER_X 0
+#endif
+
+#ifndef MXT_ACTIVE_SYNCS_PER_X
+#    define MXT_ACTIVE_SYNCS_PER_X 0
+#endif
+
+#ifndef MXT_IDLE_ACQUISITION_INTERVAL
+#    define MXT_IDLE_ACQUISITION_INTERVAL 32
+#endif
+
+#ifndef MXT_ACTIVE_ACQUISITION_INTERVAL
+#    define MXT_ACTIVE_ACQUISITION_INTERVAL 10
+#endif
+
+#ifndef MXT_RETRANSMISSION_COMPENSATION_ENABLE
+#    define MXT_RETRANSMISSION_COMPENSATION_ENABLE 1
+#endif
+
+#ifndef MXT_MOVE_HYSTERESIS_INITIAL
+#    define MXT_MOVE_HYSTERESIS_INITIAL 10
+#endif
+
+#ifndef MXT_MOVE_HYSTERESIS_NEXT
+#    define MXT_MOVE_HYSTERESIS_NEXT 4
+#endif
+
+#ifndef MXT_LOW_PASS_FILTER_COEFFICIENT
+#    define MXT_LOW_PASS_FILTER_COEFFICIENT 0
+#endif
+
+#ifndef MXT_CHARGE_TIME
+#    define MXT_CHARGE_TIME 1
+#endif
+
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
 // versions. Instead must read the addresses from the object table.
 static uint16_t t2_encryption_status_address                 = 0;
@@ -229,31 +269,31 @@ void maxtouch_init(void) {
     // Configure power saving features
     if (t7_powerconfig_address) {
         mxt_gen_powerconfig_t7 t7 = {};
-        t7.idleacqint             = 255;                                   // The acquisition interval while in idle mode. 255 is free-running (as fast as possible).
-        t7.actacqint              = 255;                                   // The acquisition interval while in active mode. 255 is free-running (as fast as possible).
+        t7.idleacqint             = MXT_IDLE_ACQUISITION_INTERVAL;         // The acquisition interval while in idle mode. 255 is free-running (as fast as possible).
+        t7.actacqint              = MXT_ACTIVE_ACQUISITION_INTERVAL;       // The acquisition interval while in active mode. 255 is free-running (as fast as possible).
         t7.actv2idelto            = 50;                                    // The timeout for transitioning from active to idle mode
         t7.cfg                    = T7_CFG_ACTVPIPEEN | T7_CFG_IDLEPIPEEN; // Enable pipelining in both active and idle mode
 
         i2c_writeReg16(MXT336UD_ADDRESS, t7_powerconfig_address, (uint8_t *)&t7, sizeof(mxt_gen_powerconfig_t7), MXT_I2C_TIMEOUT_MS);
     }
-#ifdef DIGITIZER_HAS_STYLUS
+
     // Configure capacitive acquision, currently we use all the default values but it feels like some of this stuff might be important.
     if (t8_acquisitionconfig_address) {
         mxt_gen_acquisitionconfig_t8 t8 = {};
-        t8.chrgtime                     = 1;
+        t8.chrgtime                     = MXT_CHARGE_TIME;
         t8.tchautocal                   = MXT_RECALIBRATE_AFTER;
         t8.atchcalst                    = 0;
-        ;
 
         // Antitouch detection - reject palms etc..
         t8.atchcalsthr     = 50;
         t8.atchfrccalthr   = 50;
         t8.atchfrccalratio = 25;
-        t8.measallow       = 3;
+        t8.measallow       = MXT_MESALLOW;
 
         i2c_writeReg16(MXT336UD_ADDRESS, t8_acquisitionconfig_address, (uint8_t *)&t8, sizeof(mxt_gen_acquisitionconfig_t8), MXT_I2C_TIMEOUT_MS);
     }
 
+#ifdef DIGITIZER_HAS_STYLUS
     if (t42_proci_touchsupression_address) {
         mxt_proci_touchsupression_t42 t42 = {};
 
@@ -271,17 +311,19 @@ void maxtouch_init(void) {
         t42.cfg             = 1;
         i2c_writeReg16(MXT336UD_ADDRESS, t42_proci_touchsupression_address, (uint8_t *)&t42, sizeof(mxt_proci_touchsupression_t42), MXT_I2C_TIMEOUT_MS);
     }
+#endif
 
     // Mutural Capacitive Touch Engine (CTE) configuration, currently we use all the default values but it feels like some of this stuff might be important.
     if (t46_cte_config_address) {
         mxt_spt_cteconfig_t46 t46 = {};
-        t46.idlesyncsperx         = 90; // ADC samples per X.
-        t46.activesyncsperx       = 90; // ADC samples per X.
+        t46.idlesyncsperx         = MXT_IDLE_SYNCS_PER_X; // ADC samples per X.
+        t46.activesyncsperx       = MXT_ACTIVE_SYNCS_PER_X; // ADC samples per X.
         t46.inrushcfg             = 0;  // Set Y-line inrush limit resistors.
 
         i2c_writeReg16(MXT336UD_ADDRESS, t46_cte_config_address, (uint8_t *)&t46, sizeof(mxt_spt_cteconfig_t46), MXT_I2C_TIMEOUT_MS);
     }
 
+#ifdef DIGITIZER_HAS_STYLUS
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
         t47.ctrl                 = 0;              // Enable stylus detection
@@ -296,17 +338,17 @@ void maxtouch_init(void) {
         t47.maxnumsty            = 1;              // Only report a single stylus
         i2c_writeReg16(MXT336UD_ADDRESS, t47_proci_stylus_address, (uint8_t *)&t47, sizeof(mxt_proci_stylus_t47), MXT_I2C_TIMEOUT_MS);
     }
+#endif
 
     if (t80_proci_retransmissioncompensation_address) {
         mxt_proci_retransmissioncompensation_t80 t80 = {};
-        t80.ctrl                                     = 1;
+        t80.ctrl                                     = MXT_RETRANSMISSION_COMPENSATION_ENABLE;
         t80.compgain                                 = 5;
         t80.targetdelta                              = 125;
         t80.compthr                                  = 60;
         i2c_writeReg16(MXT336UD_ADDRESS, t80_proci_retransmissioncompensation_address, (uint8_t *)&t80, sizeof(mxt_proci_retransmissioncompensation_t80), MXT_I2C_TIMEOUT_MS);
     }
 
-#endif
 
     // Multiple touch touchscreen confguration - defines an area of the sensor to use as a trackpad/touchscreen. This object generates all our interesting report messages.
     if (t100_multiple_touch_touchscreen_address) {
@@ -348,8 +390,8 @@ void maxtouch_init(void) {
         cfg.movsmooth    = 0; // The amount of smoothing applied to movements, this tails off at higher speeds
         cfg.movfilter    = 0; // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
         // These two fields implement a simple filter for reducing jitter, but large values cause the pointer to stick in place before moving.
-        cfg.movhysti = 10; // Initial movement hysteresis
-        cfg.movhystn = 4;  // Next movement hysteresis
+        cfg.movhysti = MXT_MOVE_HYSTERESIS_INITIAL; // Initial movement hysteresis
+        cfg.movhystn = MXT_MOVE_HYSTERESIS_NEXT;  // Next movement hysteresis
 
         cfg.tchdiup   = 4; // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
         cfg.tchdidown = 2; // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
@@ -372,6 +414,7 @@ void maxtouch_init(void) {
 
     // Configure shieldless and lensbending objects to provide some additional resistance
     // against bad behaviour.
+#ifdef MXT_T56_SHIELDLESS_ENABLE
     if (t56_proci_shieldless_address) {
         mxt_proci_shieldless_t56 t56 = {};
         t56.ctrl                     = T56_CTRL_ENABLE;
@@ -379,12 +422,15 @@ void maxtouch_init(void) {
         t56.inttime                  = 10;
         i2c_writeReg16(MXT336UD_ADDRESS, t56_proci_shieldless_address, (uint8_t *)&t56, sizeof(mxt_proci_shieldless_t56), MXT_I2C_TIMEOUT_MS);
     }
+#endif
+#ifdef MXT_T65_LENS_BENDING_ENABLE
     if (t65_proci_lensbending_address) {
         mxt_proci_lensbending_t65 t65 = {};
         t65.ctrl                      = T65_CTRL_ENABLE;
-        t65.lpfiltcoef                = 10; // default (0): 5, range 1 to 15.
+        t65.lpfiltcoef                = MXT_LOW_PASS_FILTER_COEFFICIENT; // default (0): 5, range 1 to 15.
         i2c_writeReg16(MXT336UD_ADDRESS, t65_proci_lensbending_address, (uint8_t *)&t65, sizeof(mxt_proci_lensbending_t65), MXT_I2C_TIMEOUT_MS);
     }
+#endif
 }
 
 // Store state different from report so we can report MXT_DOWNUP as MXT_DOWN, but remember we are MXT_UP
