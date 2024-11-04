@@ -25,6 +25,7 @@
 #    define MXT_RETRANSMISSION_COMPENSATION_ENABLE 0
 #    define MXT_X_PITCH 38 // Procyon boards have a standard 3.8mm pitch
 #    define MXT_Y_PITCH 38
+#    define MXT_ACTIVE_ACQUISITION_INTERVAL 255 // Free run while active - this enables us to reach a polling rate of around 300Hz
 #endif
 
 // Board specific configuration
