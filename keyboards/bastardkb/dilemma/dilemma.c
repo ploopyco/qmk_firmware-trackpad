@@ -20,7 +20,7 @@
 #include "dilemma.h"
 
 // TODO:  Something crashes a boot when running in digitizer mode
-#ifdef DIGITIZER_ENABLE
+#ifdef POINTING_DEVICE_DRIVER_digitizer
 #   undef POINTING_DEVICE_ENABLE
 #endif
 
