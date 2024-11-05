@@ -1,3 +1,4 @@
 SERIAL_DRIVER = vendor
-
-POINTING_DEVICE_DRIVER = cirque_pinnacle_spi
+I2C_DRIVER_REQUIRED = yes
+DIGITIZER_DRIVER = maxtouch
+POINTING_DEVICE_DRIVER = digitizer
