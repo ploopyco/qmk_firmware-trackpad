@@ -134,6 +134,10 @@
 #    define MXT_STYLUS_HOVER_THRESHOLD 8
 #endif
 
+#ifndef MXT_CONFTHR
+#   define MXT_CONFTHR 2
+#endif
+
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
 // versions. Instead must read the addresses from the object table.
 static uint16_t t2_encryption_status_address                 = 0;
@@ -408,7 +412,7 @@ void maxtouch_init(void) {
         cfg.xrange = DIGITIZER_RESOLUTION_X; // The logical and physical resolution is reported in our USB descriptor
         cfg.yrange = DIGITIZER_RESOLUTION_Y; // the host uses this to set the speed of the pointer.
 #endif
-        cfg.cfg2 = 2;
+        cfg.cfg2 = MXT_CONFTHR; // Touch debounce
 
         i2c_status_t status = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address, (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         if (status != I2C_STATUS_SUCCESS) {
