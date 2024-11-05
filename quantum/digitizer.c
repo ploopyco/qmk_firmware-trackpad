@@ -473,7 +473,7 @@ bool digitizer_task(void) {
 
         int skip_count = 0;
         for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
-            const bool finger_contact = (new_state.contacts[i].type == FINGER) && ((new_state.contacts[i].amplitude > 0) || (digitizer_state.contacts[i].amplitude > 0));
+            const bool finger_contact = (new_state.contacts[i].type == FINGER) && ((new_state.contacts[i].tip) || (digitizer_state.contacts[i].tip));
             const uint8_t finger_index = finger_contact ? report.contact_count :  DIGITIZER_CONTACT_COUNT - skip_count - 1;
 
             if (new_state.contacts[i].type != UNKNOWN)
@@ -483,9 +483,7 @@ bool digitizer_task(void) {
                 contacts++;
             }
             if (finger_contact) {
-                if (new_state.contacts[i].amplitude > 0 && new_state.contacts[i].confidence) {
-                    report.fingers[finger_index].tip = true;
-                }
+                report.fingers[finger_index].tip = new_state.contacts[i].tip;
                 report.contact_count ++;
             }
             else {
@@ -501,8 +499,8 @@ bool digitizer_task(void) {
                 updated_stylus = true;
                 stylus_report.x = new_state.contacts[i].x;
                 stylus_report.y = new_state.contacts[i].y;
-                stylus_report.tip = (new_state.contacts[i].amplitude > 2) && new_state.contacts[i].confidence;
-                stylus_report.in_range = 1;
+                stylus_report.tip = new_state.contacts[i].tip;
+                stylus_report.in_range = new_state.contacts[i].in_range;
                 stylus_present = true;
             }
             else if (digitizer_state.contacts[i].type == STYLUS) {

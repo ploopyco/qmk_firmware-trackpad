@@ -29,7 +29,8 @@ typedef enum { UNKNOWN, FINGER, STYLUS } digitizer_type_t;
 
 typedef struct {
     digitizer_type_t type;
-    uint8_t          amplitude;
+    uint8_t          tip : 1;
+    uint8_t          in_range : 1;
     uint8_t          confidence : 1;
     uint16_t         x;
     uint16_t         y;

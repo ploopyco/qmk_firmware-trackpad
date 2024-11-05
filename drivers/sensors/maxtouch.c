@@ -130,6 +130,10 @@
 #    define MXT_CHARGE_TIME 1
 #endif
 
+#ifndef MXT_STYLUS_HOVER_THRESHOLD
+#    define MXT_STYLUS_HOVER_THRESHOLD 8
+#endif
+
 // Data from the object table. Registers are not at fixed addresses, they may vary between firmware
 // versions. Instead must read the addresses from the object table.
 static uint16_t t2_encryption_status_address                 = 0;
@@ -446,9 +450,6 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
 
                 if (message.report_id == t100_first_report_id) {
                     const uint8_t  fingers  = message.data[1];
-                    const uint16_t tcharea  = (message.data[3] << 8) | message.data[2];
-                    const uint16_t atcharea = (message.data[5] << 8) | message.data[4];
-                    if (message.data[0] & (1 << 6)) uprintf("TCH DETECT %d, SUPPRESS %d, COUNT %d, TCHAREA %u, ATCHAREA %u\n", (message.data[0] & (1 << 7) ? 1 : 0), (message.data[0] & (1 << 6) ? 1 : 0), fingers, tcharea, atcharea);
 #ifdef MAXTOUCH_BOOTLOADER_GESTURE
                     // Debug feature - reboot to bootloader if 5 fingers are MXT_DOWN
                     // TODO: A better gesture.
@@ -458,6 +459,9 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                         // Belt and braces, make sure we dont have any stuck contacts
                         for (int j = 0; j < DIGITIZER_CONTACT_COUNT; j++) {
                             digitizer_report.contacts[j].type = UNKNOWN;
+                            digitizer_report.contacts[j].tip = false;
+                            digitizer_report.contacts[j].in_range = false;
+                            digitizer_report.contacts[j].confidence = false;
                         }
                     }
                 } else if (message.report_id == t25_self_test_report_id) {
@@ -500,27 +504,29 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                             break;
                     }
 
-                    if (event == MXT_DOWN || event == MXT_DOWNSUP) {
-                        digitizer_report.contacts[contact_id].amplitude = ampl;
+                    digitizer_report.contacts[contact_id].in_range = true;
+
+                    if (type == MXT_FINGER) {
+                        if (event == MXT_DOWN || event == MXT_MOVE) {
+                            digitizer_report.contacts[contact_id].tip = true;
+                        }
+                    }
+                    else if (type == MXT_PASSIVE_STYLUS) {
+                        digitizer_report.contacts[contact_id].tip = ampl > MXT_STYLUS_HOVER_THRESHOLD;
+                    }
+
+                    if (event == MXT_UP) {
+                        digitizer_report.contacts[contact_id].tip = false;
                     }
 
                     if (event == MXT_MOVE || event == MXT_DOWN || event == MXT_DOWNSUP || event == MXT_UP || event == MXT_UNSUPUP || event == MXT_UNSUP) {
                         digitizer_report.contacts[contact_id].x = x;
                         digitizer_report.contacts[contact_id].y = y;
                     }
-
                     if (event == MXT_SUP || event == MXT_UNSUPSUP || event == MXT_DOWNSUP) {
                         digitizer_report.contacts[contact_id].confidence = 0;
                     } else {
                         digitizer_report.contacts[contact_id].confidence = 1;
-                    }
-
-                    if (event == MXT_UP || event == MXT_UNSUPUP) {
-                        digitizer_report.contacts[contact_id].amplitude = 0;
-                    }
-                    if (event == MXT_DOWNUP) {
-                        // TODO ?
-                        digitizer_report.contacts[contact_id].amplitude = 0;
                     }
                 } else if (message.report_id == t6_command_processor_report_id) {
                     const uint8_t status = message.data[0];
