@@ -284,7 +284,11 @@ enum usb_endpoints {
 #endif
 
 #define KEYBOARD_EPSIZE 8
-#define SHARED_EPSIZE 32
+#if DIGITIZER_ENABLE
+#    define SHARED_EPSIZE 64
+#else
+#    define SHARED_EPSIZE 32
+#endif
 #define MOUSE_EPSIZE 16
 #define RAW_EPSIZE 32
 #define CONSOLE_EPSIZE 32
