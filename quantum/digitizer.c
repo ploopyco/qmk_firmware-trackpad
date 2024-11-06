@@ -157,8 +157,8 @@ void digitizer_set_shared_report(digitizer_t report) {
 }
 #endif     // defined(SPLIT_DIGITIZER_ENABLE)
 
-static bool has_digitizer_state_changed(digitizer_t *new_state, digitizer_t *old_state) {
-    const int cmp = memcmp(new_state, old_state, sizeof(digitizer_t));
+static bool has_digitizer_state_changed(digitizer_t *tmp_state, digitizer_t *old_state) {
+    const int cmp = memcmp(tmp_state, old_state, sizeof(digitizer_t));
     return cmp != 0;
 }
 
@@ -449,41 +449,42 @@ bool digitizer_task(void) {
     {
 #if defined(SPLIT_DIGITIZER_ENABLE)
 #    if defined(DIGITIZER_LEFT) || defined(DIGITIZER_RIGHT)
-        digitizer_t new_state = DIGITIZER_THIS_SIDE ? (digitizer_driver.get_report ? digitizer_driver.get_report(digitizer_state) : digitizer_state) : shared_digitizer_report;
+        digitizer_t driver_state = DIGITIZER_THIS_SIDE ? (digitizer_driver.get_report ? digitizer_driver.get_report(digitizer_state) : digitizer_state) : shared_digitizer_report;
 #    else
 #        error "You need to define the side(s) the digitizer is on. DIGITIZER_LEFT / DIGITIZER_RIGHT"
 #    endif
 #else
-        digitizer_t new_state = digitizer_driver.get_report ? digitizer_driver.get_report(digitizer_state) : digitizer_state;
+        digitizer_t driver_state = digitizer_driver.get_report ? digitizer_driver.get_report(digitizer_state) : digitizer_state;
 #endif
 
 #if defined(MOUSEKEY_ENABLE) && !defined(POINTING_DEVICE_ENABLE)
         // Pointing device has a more fully featured mousekeys implementation,
         // so we prefer it if pointing device is enabled.
         
-        const report_mouse_t mousekey_report = mousekey_get_report();a 
-        new_state.buttons |= mousekey_report.buttons;
+        const report_mouse_t mousekey_report = mousekey_get_report();
+        driver_state.buttons |= mousekey_report.buttons;
 #endif
-        // Handle user modification of stylus state.
-        new_state = digitizer_task_kb(new_state);
+        // Handle user modification of stylus state. We explicity do not store the user modified
+        // state so we do not pass them back state that they have previously transformed.
+        digitizer_t tmp_state = digitizer_task_kb(driver_state);
 
-        if (digitizer_state.buttons != new_state.buttons) {
+        if (digitizer_state.buttons != tmp_state.buttons) {
             button_state_changed = true;
         }
 
         int skip_count = 0;
         for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
-            const bool finger_contact = (new_state.contacts[i].type == FINGER) && ((new_state.contacts[i].tip) || (digitizer_state.contacts[i].tip));
+            const bool finger_contact = (tmp_state.contacts[i].type == FINGER) && ((tmp_state.contacts[i].tip) || (digitizer_state.contacts[i].tip));
             const uint8_t finger_index = finger_contact ? report.contact_count :  DIGITIZER_CONTACT_COUNT - skip_count - 1;
 
-            if (new_state.contacts[i].type != UNKNOWN)
+            if (tmp_state.contacts[i].type != UNKNOWN)
             {
                 // 'contacts' is the number of current contacts wheras 'report->contact_count' also counts fingers which have
                 // been removed from the sensor since the last report.
                 contacts++;
             }
             if (finger_contact) {
-                report.fingers[finger_index].tip = new_state.contacts[i].tip;
+                report.fingers[finger_index].tip = tmp_state.contacts[i].tip;
                 report.contact_count ++;
             }
             else {
@@ -491,16 +492,16 @@ bool digitizer_task(void) {
                 report.fingers[finger_index].tip = false;
             }
             report.fingers[finger_index].contact_id = i;
-            report.fingers[finger_index].x          = new_state.contacts[i].x;
-            report.fingers[finger_index].y          = new_state.contacts[i].y;
-            report.fingers[finger_index].confidence = new_state.contacts[i].confidence;
+            report.fingers[finger_index].x          = tmp_state.contacts[i].x;
+            report.fingers[finger_index].y          = tmp_state.contacts[i].y;
+            report.fingers[finger_index].confidence = tmp_state.contacts[i].confidence;
 #ifdef DIGITIZER_HAS_STYLUS
-            if (new_state.contacts[i].type == STYLUS) {
+            if (tmp_state.contacts[i].type == STYLUS) {
                 updated_stylus = true;
-                stylus_report.x = new_state.contacts[i].x;
-                stylus_report.y = new_state.contacts[i].y;
-                stylus_report.tip = new_state.contacts[i].tip;
-                stylus_report.in_range = new_state.contacts[i].in_range;
+                stylus_report.x = tmp_state.contacts[i].x;
+                stylus_report.y = tmp_state.contacts[i].y;
+                stylus_report.tip = tmp_state.contacts[i].tip;
+                stylus_report.in_range = tmp_state.contacts[i].in_range;
                 stylus_present = true;
             }
             else if (digitizer_state.contacts[i].type == STYLUS) {
@@ -521,7 +522,7 @@ bool digitizer_task(void) {
             stylus_report.in_range = 0;
         }
 #endif
-        digitizer_state = new_state;
+        digitizer_state = driver_state;
     }
 
 #if DIGITIZER_CONTACT_COUNT > 0
@@ -542,7 +543,6 @@ bool digitizer_task(void) {
 
 #ifdef DIGITIZER_HAS_STYLUS
     if (updated_stylus) {
-        uprintf("Stylus send: %dx%d %d %d\n", stylus_report.x, stylus_report.y, stylus_report.tip, stylus_report.in_range);
         host_digitizer_stylus_send(&stylus_report);
     }
 #endif
@@ -553,7 +553,7 @@ bool digitizer_task(void) {
             host_mouse_send(&mouse_report);
 #endif
         }
-            else {
+        else {
             host_digitizer_send(&report);
         }
     }
