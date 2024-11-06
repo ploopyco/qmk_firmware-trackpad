@@ -21,9 +21,6 @@
 #include "gpio.h"
 #include "keyboard.h"
 #include "action.h"
-#ifdef MOUSEKEY_ENABLE
-#    include "mousekey.h"
-#endif
 #if defined(POINTING_DEVICE_DRIVER_digitizer)
 #    include "pointing_device.h"
 #endif
@@ -280,7 +277,6 @@ static bool update_gesture_state(void) {
         if (gesture == POSSIBLE_TAP) {
             const uint32_t duration = timer_elapsed32(tap_time);
             if (duration >= DIGITIZER_MOUSE_TAP_HOLD_TIME) {
-                uprintf("Clear Tap\n");
                 gesture = NO_GESTURE;
                 return true;
             }
@@ -455,14 +451,6 @@ bool digitizer_task(void) {
 #    endif
 #else
         digitizer_t driver_state = digitizer_driver.get_report ? digitizer_driver.get_report(digitizer_state) : digitizer_state;
-#endif
-
-#if defined(MOUSEKEY_ENABLE) && !defined(POINTING_DEVICE_ENABLE)
-        // Pointing device has a more fully featured mousekeys implementation,
-        // so we prefer it if pointing device is enabled.
-        
-        const report_mouse_t mousekey_report = mousekey_get_report();
-        driver_state.buttons |= mousekey_report.buttons;
 #endif
         // Handle user modification of stylus state. We explicity do not store the user modified
         // state so we do not pass them back state that they have previously transformed.
