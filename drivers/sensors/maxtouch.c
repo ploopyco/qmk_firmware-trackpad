@@ -334,7 +334,7 @@ void maxtouch_init(void) {
 #ifdef DIGITIZER_HAS_STYLUS
     if (t47_proci_stylus_address) {
         mxt_proci_stylus_t47 t47 = {};
-        t47.ctrl                 = 0;              // Enable stylus detection
+        t47.ctrl                 = 1;              // Enable stylus detection
         t47.cfg                  = T47_CFG_SUPSTY; // Supress stylus detections when normal touches are present.
         t47.contmax              = 40;             // The maximum contact diameter of the stylus in 0.1mm increments
         t47.maxtcharea           = 100;            // Maximum touch area a contact can have an still be considered a stylus
