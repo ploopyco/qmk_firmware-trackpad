@@ -18,5 +18,6 @@
 #define MXT_CHARGE_TIME 10
 #define MXT_IDLE_SYNCS_PER_X 20
 #define MXT_ACTIVE_SYNCS_PER_X 20
+#define MXT_ACTIVE_ACQUISITION_INTERVAL 255 // Free run while active - this enables us to reach a polling rate of around 300Hz
 
 #define I2C1_CLOCK_SPEED 1000000
