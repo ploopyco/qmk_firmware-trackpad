@@ -130,8 +130,9 @@
 #    define MXT_CHARGE_TIME 1
 #endif
 
+// Any stylus event smaller than this, is treated as a hover rather than a press.
 #ifndef MXT_STYLUS_HOVER_THRESHOLD
-#    define MXT_STYLUS_HOVER_THRESHOLD 8
+#    define MXT_STYLUS_HOVER_THRESHOLD 6
 #endif
 
 #ifndef MXT_CONFTHR
@@ -336,7 +337,7 @@ void maxtouch_init(void) {
         mxt_proci_stylus_t47 t47 = {};
         t47.ctrl                 = 1;              // Enable stylus detection
         t47.cfg                  = T47_CFG_SUPSTY; // Supress stylus detections when normal touches are present.
-        t47.contmax              = 40;             // The maximum contact diameter of the stylus in 0.1mm increments
+        t47.contmax              = 80;             // The maximum contact diameter of the stylus in 0.1mm increments
         t47.maxtcharea           = 100;            // Maximum touch area a contact can have an still be considered a stylus
         t47.stability            = 30;             // Higher values prevent the stylus from dropping out when it gets small
         t47.confthr              = 6;              // Higher values increase the chances of correctly detecting as stylus, but introduce a delay
@@ -356,7 +357,6 @@ void maxtouch_init(void) {
         t80.compthr                                  = 60;
         i2c_writeReg16(MXT336UD_ADDRESS, t80_proci_retransmissioncompensation_address, (uint8_t *)&t80, sizeof(mxt_proci_retransmissioncompensation_t80), MXT_I2C_TIMEOUT_MS);
     }
-
 
     // Multiple touch touchscreen confguration - defines an area of the sensor to use as a trackpad/touchscreen. This object generates all our interesting report messages.
     if (t100_multiple_touch_touchscreen_address) {

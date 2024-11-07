@@ -424,7 +424,6 @@ bool digitizer_task(void) {
 #ifdef DIGITIZER_HAS_STYLUS
     report_digitizer_stylus_t stylus_report = {};
     bool updated_stylus = false;
-    bool stylus_present = false;
 #endif
     int contacts = 0;
     bool gesture_changed = false;
@@ -432,13 +431,13 @@ bool digitizer_task(void) {
 
 #if DIGITIZER_TASK_THROTTLE_MS
     static uint32_t last_exec = 0;
-
     if (timer_elapsed32(last_exec) < DIGITIZER_TASK_THROTTLE_MS) {
         return false;
     }
     last_exec = timer_read32();
 #endif
     gesture_changed = update_gesture_state();
+
 #ifdef DIGITIZER_MOTION_PIN
     if (gesture_changed || digitizer_motion_detected())
 #endif
@@ -490,26 +489,17 @@ bool digitizer_task(void) {
                 stylus_report.y = tmp_state.contacts[i].y;
                 stylus_report.tip = tmp_state.contacts[i].tip;
                 stylus_report.in_range = tmp_state.contacts[i].in_range;
-                stylus_present = true;
             }
             else if (digitizer_state.contacts[i].type == STYLUS) {
-                // Drop out of range
+                // Drop the tip, then drop out of range next scan
                 updated_stylus = true;
                 stylus_report.x = digitizer_state.contacts[i].x;
                 stylus_report.y = digitizer_state.contacts[i].y;
-                stylus_report.in_range = 0;
-                stylus_report.tip = 0;
+                stylus_report.in_range = false;
+                stylus_report.tip = false;
             }
 #endif
         }
-#ifdef DIGITIZER_HAS_STYLUS
-        // If the last touch was low confidence, we may be marked as in range, but not pressed.
-        if (stylus_report.in_range && !stylus_present) {
-            updated_stylus = true;
-            stylus_report.tip = 0;
-            stylus_report.in_range = 0;
-        }
-#endif
         digitizer_state = driver_state;
     }
 
