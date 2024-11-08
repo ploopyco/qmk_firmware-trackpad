@@ -440,7 +440,9 @@ bool digitizer_task(void) {
 
         int skip_count = 0;
         for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
-            const bool    finger_contact = (tmp_state.contacts[i].type == FINGER) && ((tmp_state.contacts[i].tip) || (digitizer_state.contacts[i].tip));
+            // If this is a finger which is down, or it was on the last scan (but now it is up)..
+            const bool    finger_contact = (tmp_state.contacts[i].type == FINGER && tmp_state.contacts[i].tip) ||
+                                            (digitizer_state.contacts[i].type == FINGER && digitizer_state.contacts[i].tip);
             const uint8_t finger_index   = finger_contact ? report.contact_count : DIGITIZER_CONTACT_COUNT - skip_count - 1;
 
             if (tmp_state.contacts[i].type != UNKNOWN) {

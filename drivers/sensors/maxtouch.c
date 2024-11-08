@@ -377,6 +377,7 @@ void maxtouch_init(void) {
         cfg.cfg1         = rotation;
         cfg.scraux       = 0x7;                                             // AUX data: Report the number of touch events, touch area, anti touch area
         cfg.tchaux       = 0x2;                                             // report amplitude
+        cfg.tcheventcfg  = 24;                                              // Disable reporting suppressed events
         cfg.numtch       = DIGITIZER_CONTACT_COUNT;                         // The number of touch reports we want to receive (upto 10)
         cfg.xsize        = MXT_MATRIX_X_SIZE;                               // Make configurable as this depends on the sensor design.
         cfg.ysize        = MXT_MATRIX_Y_SIZE;                               // Make configurable as this depends on the sensor design.
