@@ -519,7 +519,7 @@ digitizer_t maxtouch_get_report(digitizer_t digitizer_report) {
                         digitizer_report.contacts[contact_id].tip = ampl > MXT_STYLUS_HOVER_THRESHOLD;
                     }
 
-                    if (event == MXT_UP) {
+                    if (event == MXT_UP || event == MXT_UNSUPSUP) {
                         digitizer_report.contacts[contact_id].tip = false;
                     }
 
