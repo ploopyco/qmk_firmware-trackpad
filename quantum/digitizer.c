@@ -68,13 +68,16 @@ typedef struct {
     digitizer_t (*get_report)(digitizer_t digitizer_report);
 } digitizer_driver_t;
 
+
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
 bool                  digitizer_send_mouse_reports = true;
 static report_mouse_t mouse_report                 = {};
 
-#if defined(POINTING_DEVICE_DRIVER_digitizer)
-report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report);
+static report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report);
+static uint16_t digitizer_get_cpi(void);
+static void digitizer_set_cpi(uint16_t cpi);
 
-const pointing_device_driver_t digitizer_pointing_device_driver = {.init = NULL, .get_report = digitizer_get_mouse_report, .get_cpi = NULL, .set_cpi = NULL};
+const pointing_device_driver_t digitizer_pointing_device_driver = {.init = NULL, .get_report = digitizer_get_mouse_report, .get_cpi = digitizer_get_cpi, .set_cpi = digitizer_set_cpi};
 #endif
 
 #if defined(DIGITIZER_DRIVER_azoteq_iqs5xx)
@@ -132,19 +135,32 @@ digitizer_t digitizer_get_state(void) {
     return digitizer_state;
 }
 
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
 /**
  * @brief Gets the current digitizer mouse report, the pointing device feature will send this is we
  * nave fallen back to mouse mode.
  *
  * @return report_mouse_t
  */
-report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report) {
+static report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report) {
     report_mouse_t report = mouse_report;
     // Retain the button state, but drop any motion.
     memset(&mouse_report, 0, sizeof(report_mouse_t));
     mouse_report.buttons = report.buttons;
     return report;
 }
+
+static uint16_t mouse_cpi = (DIGITIZER_RESOLUTION_X/DIGITIZER_WIDTH_MM);
+
+static uint16_t digitizer_get_cpi(void) {
+    return mouse_cpi;
+}
+
+static void digitizer_set_cpi(uint16_t cpi) {
+    uprintf("CPI %u\n", cpi);
+    mouse_cpi = cpi;
+}
+#endif
 
 /**
  * @brief Sets digitizer state used by the digitier task
@@ -221,6 +237,7 @@ __attribute__((weak)) bool digitizer_motion_detected(void) {
 }
 #endif
 
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
 typedef enum { NO_GESTURE, POSSIBLE_TAP, HOLD, RIGHT_CLICK, MIDDLE_CLICK, SWIPE } gesture_state;
 
 static gesture_state gesture  = NO_GESTURE;
@@ -245,7 +262,9 @@ static bool update_gesture_state(void) {
 
 // We can fallback to reporting as a mouse for hosts which do not implement trackpad support
 static void update_mouse_report(report_digitizer_t *report) {
-    static report_digitizer_t last_report = {};
+    static uint16_t last_x = 0;
+    static uint16_t last_y = 0;
+    static bool last_tip = 0;
 
     // Some state held to perform basic gesture detection
     static int     contact_start_time = 0;
@@ -258,18 +277,22 @@ static void update_mouse_report(report_digitizer_t *report) {
     int last_contacts = 0;
 
     for (int i = 0; i < DIGITIZER_CONTACT_COUNT; i++) {
-        if (report->fingers[i].tip && report->fingers[i].confidence) {
+        if (report->fingers[i].tip) {
             contacts++;
         }
-        if (last_report.fingers[i].tip && last_report.fingers[i].confidence) {
+        if (last_tip) {
             last_contacts++;
         }
     }
+
+    const uint16_t x = report->fingers[0].x * (DIGITIZER_RESOLUTION_X/DIGITIZER_WIDTH_MM) / mouse_cpi;
+    const uint16_t y = report->fingers[0].y * (DIGITIZER_RESOLUTION_Y/DIGITIZER_HEIGHT_MM)  / mouse_cpi;
+
     if (last_contacts == 0) {
         if (contacts > 0) {
             contact_start_time = timer_read32();
-            contact_start_x    = report->fingers[0].x;
-            contact_start_y    = report->fingers[0].y;
+            contact_start_x    = x;
+            contact_start_y    = y;
         }
 
         if (contacts == 1 && gesture == POSSIBLE_TAP) {
@@ -284,8 +307,9 @@ static void update_mouse_report(report_digitizer_t *report) {
         max_contacts = MAX(contacts, max_contacts);
 
         const uint32_t duration   = timer_elapsed32(contact_start_time);
-        const int32_t  distance_x = report->fingers[0].x - contact_start_x;
-        const int32_t  distance_y = report->fingers[0].y - contact_start_y;
+
+        const int32_t  distance_x = x - contact_start_x;
+        const int32_t  distance_y = y - contact_start_y;
 
         switch (contacts) {
             case 0: {
@@ -311,18 +335,18 @@ static void update_mouse_report(report_digitizer_t *report) {
                 break;
             }
             case 1:
-                if (report->fingers[0].tip && last_report.fingers[0].tip) {
-                    mouse_report.x = report->fingers[0].x - last_report.fingers[0].x;
-                    mouse_report.y = report->fingers[0].y - last_report.fingers[0].y;
+                if (report->fingers[0].tip && last_tip) {
+                    mouse_report.x = x - last_x;
+                    mouse_report.y = y - last_y;
                 }
                 break;
             case 2:
                 // Scrolling is too fast, so divide the h/v values.
-                if (report->fingers[0].tip && last_report.fingers[0].tip) {
+                if (report->fingers[0].tip && last_tip) {
                     static int carry_h = 0;
                     static int carry_v = 0;
-                    const int  h       = report->fingers[0].x - last_report.fingers[0].x + carry_h;
-                    const int  v       = report->fingers[0].y - last_report.fingers[0].y + carry_v;
+                    const int  h       = x - last_x + carry_h;
+                    const int  v       = y - last_y + carry_v;
 
                     carry_h = h % DIGITIZER_SCROLL_DIVISOR;
                     carry_v = v % DIGITIZER_SCROLL_DIVISOR;
@@ -365,13 +389,16 @@ static void update_mouse_report(report_digitizer_t *report) {
         mouse_report.buttons |= 0x4;
     }
 
-    last_report = *report;
+    last_x = x;
+    last_y = y;
+    last_tip = report->fingers[0].tip;
 }
+#endif
 
 bool digitizer_task(void) {
     static int         last_contacts = 0;
     report_digitizer_t report        = {.fingers = {}, .contact_count = 0, .scan_time = 0, .button1 = digitizer_state.button1, .button2 = digitizer_state.button2, .button3 = digitizer_state.button3};
-#ifdef DIGITIZER_HAS_STYLUS
+#if defined(DIGITIZER_HAS_STYLUS)
     report_digitizer_stylus_t stylus_report  = {};
     bool                      updated_stylus = false;
 #endif
@@ -386,9 +413,11 @@ bool digitizer_task(void) {
     }
     last_exec = timer_read32();
 #endif
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
     gesture_changed = update_gesture_state();
+#endif
 
-#ifdef DIGITIZER_MOTION_PIN
+#if defined(DIGITIZER_MOTION_PIN)
     if (gesture_changed || digitizer_motion_detected())
 #endif
     {
@@ -472,12 +501,16 @@ bool digitizer_task(void) {
     }
 #endif
     if (report.contact_count || button_state_changed || gesture_changed) {
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
         if (digitizer_send_mouse_reports) {
             update_mouse_report(&report);
-#if !defined(POINTING_DEVICE_ENABLE)
+#    if !defined(POINTING_DEVICE_ENABLE)
             host_mouse_send(&mouse_report);
+#    endif
+        }
+        else 
 #endif
-        } else {
+        {
             host_digitizer_send(&report);
         }
     }

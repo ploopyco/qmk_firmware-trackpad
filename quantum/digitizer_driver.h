@@ -27,12 +27,14 @@
 #        define DIGITIZER_WIDTH_MM MXT_SENSOR_WIDTH_MM
 #        define DIGITIZER_HEIGHT_MM MXT_SENSOR_HEIGHT_MM
 #    endif
+#    ifndef MXT_SAMPLES_PER_MM
+#       define MXT_SAMPLES_PER_MM 100    // This is somewhat arbitary, but DIGITIZER_RESOLUTION_X/Y should not overflow a uint16_t
+#   endif
 #    ifndef DIGITIZER_RESOLUTION_X
-#        define DIGITIZER_RESOLUTION_X (DIGITIZER_WIDTH_MM * 50)
-
+#        define DIGITIZER_RESOLUTION_X (DIGITIZER_WIDTH_MM * MXT_SAMPLES_PER_MM)
 #    endif
 #    ifndef DIGITIZER_RESOLUTION_Y
-#         define DIGITIZER_RESOLUTION_Y (DIGITIZER_HEIGHT_MM * 50)
+#         define DIGITIZER_RESOLUTION_Y (DIGITIZER_HEIGHT_MM * MXT_SAMPLES_PER_MM)
 #    endif
 #    define DIGITIZER_TOUCH_PAD
 #else

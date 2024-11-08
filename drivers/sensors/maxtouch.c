@@ -12,7 +12,7 @@
 #    include "raw_hid.h"
 #endif
 
-#define SWAP_BYTES(a) ((a << 8) | (a >> 8))
+#define SWAP_BYTES(a) (((a << 8) & 0xff00) | ((a >> 8) & 0xff))
 
 // Mandatory configuration. These are hardware specific.
 #ifndef MXT_SENSOR_WIDTH_MM
@@ -362,17 +362,17 @@ void maxtouch_init(void) {
     if (t100_multiple_touch_touchscreen_address) {
         mxt_touch_multiscreen_t100 cfg = {};
 
-        cfg.ctrl = T100_CTRL_RPTEN | T100_CTRL_ENABLE | T100_CTRL_SCANEN; // Enable the t100 object, and enable message reporting for the t100 object.1. Also enable close scanning mode.
+        cfg.ctrl         = T100_CTRL_RPTEN | T100_CTRL_ENABLE | T100_CTRL_SCANEN; // Enable the t100 object, and enable message reporting for the t100 object.1. Also enable close scanning mode.
         // TODO: Generic handling of rotation/inversion for absolute mode?
         uint8_t rotation = 0;
 #ifdef MXT_INVERT_X
-        rotation |= T100_CFG_INVERTX;
+        rotation         |= T100_CFG_INVERTX;
 #endif
 #ifdef MXT_INVERT_Y
-        rotation |= T100_CFG_INVERTY;
+        rotation         |= T100_CFG_INVERTY;
 #endif
 #ifdef MXT_SWITCH_XY
-        rotation |= T100_CFG_SWITCHXY;
+        rotation         |= T100_CFG_SWITCHXY;
 #endif
         cfg.cfg1         = rotation;
         cfg.scraux       = 0x7;                                             // AUX data: Report the number of touch events, touch area, anti touch area
@@ -398,21 +398,21 @@ void maxtouch_init(void) {
         cfg.movsmooth    = 0; // The amount of smoothing applied to movements, this tails off at higher speeds
         cfg.movfilter    = 0; // The lower 4 bits are the speed response value, higher values reduce lag, but also smoothing
         // These two fields implement a simple filter for reducing jitter, but large values cause the pointer to stick in place before moving.
-        cfg.movhysti = MXT_MOVE_HYSTERESIS_INITIAL; // Initial movement hysteresis
-        cfg.movhystn = MXT_MOVE_HYSTERESIS_NEXT;  // Next movement hysteresis
+        cfg.movhysti     = MXT_MOVE_HYSTERESIS_INITIAL; // Initial movement hysteresis
+        cfg.movhystn     = MXT_MOVE_HYSTERESIS_NEXT;  // Next movement hysteresis
 
-        cfg.tchdiup   = 4; // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
-        cfg.tchdidown = 2; // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
-        cfg.nexttchdi = 2;
-        cfg.calcfg    = 0;
+        cfg.tchdiup      = 4; // MXT_UP touch detection integration - the number of cycles before the sensor decides an MXT_UP event has occurred
+        cfg.tchdidown    = 2; // MXT_DOWN touch detection integration - the number of cycles before the sensor decides an MXT_DOWN event has occurred
+        cfg.nexttchdi    = 2;
+        cfg.calcfg       = 0;
 #ifdef MXT_SWITCH_XY
-        cfg.xrange = DIGITIZER_RESOLUTION_Y; // The logical and physical resolution is reported in our USB descriptor
-        cfg.yrange = DIGITIZER_RESOLUTION_X; // the host uses this to set the speed of the pointer.
+        cfg.xrange       = DIGITIZER_RESOLUTION_Y - 1; // The logical and physical resolution is reported in our USB descriptor
+        cfg.yrange       = DIGITIZER_RESOLUTION_X - 1; // the host uses this to set the speed of the pointer.
 #else
-        cfg.xrange = DIGITIZER_RESOLUTION_X; // The logical and physical resolution is reported in our USB descriptor
-        cfg.yrange = DIGITIZER_RESOLUTION_Y; // the host uses this to set the speed of the pointer.
+        cfg.xrange       = DIGITIZER_RESOLUTION_X - 1; // The logical and physical resolution is reported in our USB descriptor
+        cfg.yrange       = DIGITIZER_RESOLUTION_Y - 1; // the host uses this to set the speed of the pointer.
 #endif
-        cfg.cfg2 = MXT_CONFTHR; // Touch debounce
+        cfg.cfg2         = MXT_CONFTHR; // Touch debounce
 
         i2c_status_t status = i2c_writeReg16(MXT336UD_ADDRESS, t100_multiple_touch_touchscreen_address, (uint8_t *)&cfg, sizeof(mxt_touch_multiscreen_t100), MXT_I2C_TIMEOUT_MS);
         if (status != I2C_STATUS_SUCCESS) {
@@ -600,6 +600,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 case MAXTOUCH_DEBUG_REBOOT_BOOTLOADER:
                     reset_keyboard();
                     break;
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
                 case MAXTOUCH_DEBUG_SET_MOUSE_MODE: {
                     extern bool digitizer_send_mouse_reports;
                     digitizer_send_mouse_reports = (bool)data[2];
@@ -610,6 +611,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     data[1] = digitizer_send_mouse_reports;
                     break;
                 }
+#endif
                 default:
                     status = MAXTOUCH_DEBUG_INVALID_CMD;
                     break;
