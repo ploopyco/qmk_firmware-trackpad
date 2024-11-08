@@ -6,6 +6,10 @@
 
 #include "i2c_master.h"
 #include "util.h"
+#include "report.h"
+#ifdef POINTING_DEVICE_DRIVER_azoteq_iqs5xx
+#    include "pointing_device.h"
+#endif
 
 #if defined(AZOTEQ_IQS5XX_TPS43)
 #    define AZOTEQ_IQS5XX_WIDTH_MM 43
@@ -209,10 +213,12 @@ typedef struct {
 #    define POINTING_DEVICE_TASK_THROTTLE_MS AZOTEQ_IQS5XX_REPORT_RATE
 #endif
 
+#ifdef POINTING_DEVICE_DRIVER_azoteq_iqs5xx
 const pointing_device_driver_t azoteq_iqs5xx_pointing_device_driver;
+#endif
 
-void           azoteq_iqs5xx_init(void);
-i2c_status_t   azoteq_iqs5xx_wake(void);
+void         azoteq_iqs5xx_init(void);
+i2c_status_t azoteq_iqs5xx_wake(void);
 #ifdef POINTING_DEVICE_ENABLE
 report_mouse_t azoteq_iqs5xx_get_report(report_mouse_t mouse_report);
 #endif
