@@ -150,14 +150,13 @@ static report_mouse_t digitizer_get_mouse_report(report_mouse_t _mouse_report) {
     return report;
 }
 
-static uint16_t mouse_cpi = (DIGITIZER_RESOLUTION_X/DIGITIZER_WIDTH_MM);
+static uint16_t mouse_cpi = 400;
 
 static uint16_t digitizer_get_cpi(void) {
     return mouse_cpi;
 }
 
 static void digitizer_set_cpi(uint16_t cpi) {
-    uprintf("CPI %u\n", cpi);
     mouse_cpi = cpi;
 }
 #endif
