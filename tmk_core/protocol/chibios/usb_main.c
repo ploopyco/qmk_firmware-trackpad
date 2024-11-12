@@ -303,9 +303,11 @@ static bool usb_requests_hook_cb(USBDriver *usbp) {
                                     // TODO: What size should this buffer be?
                                     uint8_t buffer[128] = {};
                                     usbReadSetup(usbp, DIGITIZER_IN_EPNUM, buffer);
+#if defined(POINTING_DEVICE_DRIVER_digitizer)
                                     if (buffer[3] == 0x3) {
                                         digitizer_send_mouse_reports = false;
                                     }
+#endif
                                     usbSetupTransfer(usbp, &(setup->wValue.lbyte), 1, NULL);
                                     return true;
                                 } else if (setup->wValue.hbyte == 0x3 && setup->wValue.lbyte == REPORT_ID_DIGITIZER_GET_FEATURE) {

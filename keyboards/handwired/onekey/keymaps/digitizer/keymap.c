@@ -60,8 +60,9 @@ digitizer_t digitizer_task_kb(digitizer_t digitizer_state) {
 #endif
     digitizer_state.contacts[0].x = x * DIGITIZER_RESOLUTION_X;
     digitizer_state.contacts[0].y = y * DIGITIZER_RESOLUTION_Y;
-    // This will change, but for now small amplitudes are treated as hover events.
-    digitizer_state.contacts[0].amplitude = tip ? 10 : 2;
+
+    digitizer_state.contacts[0].tip = 0;
+    digitizer_state.contacts[0].in_range = 1;
     digitizer_state.contacts[0].confidence = 1;
 
     return digitizer_state;
